@@ -1,0 +1,269 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RateType {
+  Hourly
+  Daily
+  Flat
+  PerSlot
+}
+
+enum ParkingAreaStatus {
+  Open
+  Closed
+  Maintenance
+}
+
+enum TransactionStatus {
+  Open
+  AwaitingPayment
+  Closed
+  Cancelled
+}
+
+enum PaymentMethod {
+  Qris
+}
+
+enum PaymentStatus {
+  Pending
+  Completed
+  Failed
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  fullname     String
+  username     String   @unique
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  roleId       Int      @map("role_id")
+  role         Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  activityLogs         ActivityLog[]
+  vehicles             Vehicle[]     @relation("VehiclesRegisteredBy")
+  createdTransactions  Transaction[] @relation("TransactionsCreatedBy")
+  attendedTransactions Transaction[] @relation("TransactionsAttendedBy")
+  printedReceipts      Receipt[]     @relation("ReceiptsPrintedBy")
+  processedRefunds     Refund[]      @relation("RefundsProcessedBy")
+
+  @@map("users")
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users       User[]
+  rolePerms   RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  rolePerms   RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       Int @map("role_id")
+  permissionId Int @map("permission_id")
+
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  action    String
+  details   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("activity_logs")
+}
+
+model VehicleType {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  vehicles    Vehicle[]
+  rates       Rate[]
+
+  @@map("vehicle_types")
+}
+
+model Vehicle {
+  id             Int         @id @default(autoincrement())
+  licensePlate   String      @unique @map("license_plate")
+  vehicleTypeId  Int         @map("vehicle_type_id")
+  vehicleType    VehicleType @relation(fields: [vehicleTypeId], references: [id], onDelete: Restrict)
+  color          String
+  ownerName      String      @map("owner_name")
+  registeredById Int         @map("registered_by")
+  registeredBy   User        @relation("VehiclesRegisteredBy", fields: [registeredById], references: [id], onDelete: Restrict)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  transactions   Transaction[]
+
+  @@map("vehicles")
+}
+
+model Rate {
+  id            Int         @id @default(autoincrement())
+  name          String
+  vehicleTypeId Int         @map("vehicle_type_id")
+  vehicleType   VehicleType @relation(fields: [vehicleTypeId], references: [id], onDelete: Restrict)
+  rateType      RateType    @map("rate_type")
+  priceCents    Int         @map("price_cents")
+  graceMinutes  Int         @default(0) @map("grace_minutes")
+  validFrom     DateTime    @map("valid_from")
+  validTo       DateTime    @map("valid_to")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  transactions  Transaction[]
+
+  @@map("rates")
+}
+
+model ParkingArea {
+  id        Int               @id @default(autoincrement())
+  name      String
+  capacity  Int
+  occupied  Int               @default(0)
+  location  Json?
+  status    ParkingAreaStatus @default(Open)
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+
+  spots        ParkingSpot[]
+  transactions Transaction[]
+
+  @@map("parking_areas")
+}
+
+model ParkingSpot {
+  id         Int         @id @default(autoincrement())
+  areaId     Int         @map("area_id")
+  area       ParkingArea @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  spotCode   String      @map("spot_code")
+  isOccupied Boolean     @default(false) @map("is_occupied")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  transactions Transaction[]
+
+  @@unique([areaId, spotCode])
+  @@map("parking_spots")
+}
+
+model Transaction {
+  id              Int               @id @default(autoincrement())
+  createdById     Int?              @map("created_by")
+  createdBy       User?             @relation("TransactionsCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  attendantId     Int?              @map("attendant_id")
+  attendant       User?             @relation("TransactionsAttendedBy", fields: [attendantId], references: [id], onDelete: SetNull)
+  vehicleId       Int               @map("vehicle_id")
+  vehicle         Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  areaId          Int               @map("area_id")
+  parkingArea     ParkingArea       @relation(fields: [areaId], references: [id], onDelete: Restrict)
+  spotId          Int?              @map("spot_id")
+  parkingSpot     ParkingSpot?      @relation(fields: [spotId], references: [id], onDelete: SetNull)
+  rateId          Int?              @map("rate_id")
+  rate            Rate?             @relation(fields: [rateId], references: [id], onDelete: SetNull)
+  rateSnapshot    Json?             @map("rate_snapshot")
+  entryTime       DateTime          @map("entry_time")
+  exitTime        DateTime?         @map("exit_time")
+  durationMinutes Int?              @map("duration_minutes")
+  amountCents     Int?              @map("amount_cents")
+  status          TransactionStatus @default(Open)
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  payment  Payment?
+  receipts Receipt[]
+
+  @@map("transactions")
+}
+
+model Payment {
+  id                Int           @id @default(autoincrement())
+  transactionId     Int           @unique @map("transaction_id")
+  transaction       Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  paymentMethod     PaymentMethod @map("payment_method")
+  amountCents       Int           @map("amount_cents")
+  status            PaymentStatus @default(Pending)
+  providerReference String?       @map("provider_reference")
+  processedAt       DateTime?     @map("processed_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  receipt Receipt?
+  refund  Refund?
+
+  @@map("payments")
+}
+
+model Receipt {
+  id            Int         @id @default(autoincrement())
+  transactionId Int         @map("transaction_id")
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  paymentId     Int         @unique @map("payment_id")
+  payment       Payment     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  receiptData   Json        @map("receipt_data")
+  printedById   Int?        @map("printed_by")
+  printedBy     User?       @relation("ReceiptsPrintedBy", fields: [printedById], references: [id], onDelete: SetNull)
+  printedAt     DateTime    @default(now()) @map("printed_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@map("receipts")
+}
+
+model Refund {
+  id            Int      @id @default(autoincrement())
+  paymentId     Int      @unique @map("payment_id")
+  payment       Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  amountCents   Int      @map("amount_cents")
+  reason        String
+  processedById Int      @map("processed_by")
+  processedBy   User     @relation("RefundsProcessedBy", fields: [processedById], references: [id], onDelete: Restrict)
+  processedAt   DateTime @default(now()) @map("processed_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("refunds")
+}
