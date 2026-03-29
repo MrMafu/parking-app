@@ -1,0 +1,74 @@
+import { Hono } from "hono";
+import { setCookie, deleteCookie } from "hono/cookie";
+import { loginSchema } from "../validators/auth-schema";
+import { loginUser } from "../services/auth-service";
+import { requireAuth } from "../middlewares/auth";
+
+const auth = new Hono();
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "Lax" as const,
+  path: "/",
+  maxAge: 3600, // 1 hour
+};
+
+auth.post("/login", async (c) => {
+  const body = await c.req.json();
+  const parsed = loginSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return c.json(
+      {
+        message: "Validation failed",
+        errors: parsed.error.flatten(),
+      },
+      400
+    );
+  }
+
+  try {
+    const result = await loginUser(parsed.data.username, parsed.data.password);
+
+    setCookie(c, "auth_token", result.accessToken, cookieOptions);
+
+    return c.json(
+      {
+        message: "Login successful",
+        data: {
+          user: result.user,
+        },
+      },
+      200
+    );
+  } catch (error) {
+    return c.json(
+      {
+        message: error instanceof Error ? error.message : "Login failed",
+      },
+      401
+    );
+  }
+});
+
+auth.get("/me", requireAuth, async (c) => {
+  const user = c.get("authUser");
+
+  return c.json({
+    message: "Authenticated user",
+    data: user,
+  });
+});
+
+auth.post("/logout", async (c) => {
+  deleteCookie(c, "auth_token", {
+    path: "/",
+  });
+
+  return c.json({
+    message: "Logout successful",
+  });
+});
+
+export default auth;
