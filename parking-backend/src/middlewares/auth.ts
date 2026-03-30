@@ -1,9 +1,9 @@
 import type { Context, Next } from "hono";
 import { getCookie } from "hono/cookie";
 import { verifyAccessToken } from "../lib/jwt";
-import type { AuthUser } from "../types/auth";
+import type { AuthEnv } from "../types/auth";
 
-export async function requireAuth(c: Context, next: Next) {
+export async function requireAuth(c: Context<AuthEnv>, next: Next) {
   const token = getCookie(c, "auth_token");
 
   if (!token) {
@@ -12,7 +12,7 @@ export async function requireAuth(c: Context, next: Next) {
 
   try {
     const user = await verifyAccessToken(token);
-    c.set("authUser", user as AuthUser);
+    c.set("authUser", user);
     await next();
   } catch {
     return c.json({ message: "Unauthorized" }, 401);

@@ -1,10 +1,11 @@
 import { Hono } from "hono";
 import { setCookie, deleteCookie } from "hono/cookie";
 import { loginSchema } from "../validators/auth-schema";
-import { loginUser } from "../services/auth-service";
+import { loginUser, getPublicUserById } from "../services/auth-service";
 import { requireAuth } from "../middlewares/auth";
+import type { AuthEnv } from "../types/auth";
 
-const auth = new Hono();
+const auth = new Hono<AuthEnv>();
 
 const cookieOptions = {
   httpOnly: true,
@@ -36,9 +37,7 @@ auth.post("/login", async (c) => {
     return c.json(
       {
         message: "Login successful",
-        data: {
-          user: result.user,
-        },
+        data: { user: result.user },
       },
       200
     );
@@ -53,7 +52,14 @@ auth.post("/login", async (c) => {
 });
 
 auth.get("/me", requireAuth, async (c) => {
-  const user = c.get("authUser");
+  const authUser = c.get("authUser");
+  const userId = Number(authUser.userId);
+
+  const user = await getPublicUserById(userId);
+
+  if (!user) {
+    return c.json({ message: "User not found" }, 404);
+  }
 
   return c.json({
     message: "Authenticated user",
