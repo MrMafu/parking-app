@@ -47,7 +47,7 @@ model User {
   fullname     String
   username     String   @unique
   email        String   @unique
-  passwordHash String   @map("password_hash")
+  password     String   @map("password")
   roleId       Int      @map("role_id")
   role         Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
   isActive     Boolean  @default(true) @map("is_active")
