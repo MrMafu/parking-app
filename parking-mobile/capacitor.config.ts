@@ -1,9 +1,14 @@
-import type { CapacitorConfig } from '@capacitor/cli';
+import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: 'io.ionic.starter',
-  appName: 'parking-mobile',
-  webDir: 'dist'
+  appId: "io.ionic.starter",
+  appName: "parking-mobile",
+  webDir: "dist",
+  plugins: {
+    CapacitorCookies: {
+      enabled: true,
+    }
+  }
 };
 
 export default config;

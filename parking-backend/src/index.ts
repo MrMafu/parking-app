@@ -9,7 +9,10 @@ const app = new Hono()
 app.use(
   "*",
   cors({
-    origin: ["http://localhost:3001"], // frontend URL (placeholder for now)
+    origin: [
+      "http://localhost:3001", // web localhost
+      "http://localhost:8100", // mobile localhost
+    ],
     credentials: true,
   })
 );
