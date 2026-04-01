@@ -43,16 +43,17 @@ enum PaymentStatus {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   fullname     String
-  username     String   @unique
-  email        String   @unique
-  password     String   @map("password")
-  roleId       Int      @map("role_id")
-  role         Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  username     String    @unique
+  email        String    @unique
+  password     String    @map("password")
+  roleId       Int       @map("role_id")
+  role         Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
 
   activityLogs         ActivityLog[]
   vehicles             Vehicle[]     @relation("VehiclesRegisteredBy")

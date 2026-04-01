@@ -89,6 +89,9 @@ export async function updateUser(
 export async function deleteUser(id: number): Promise<void> {
   await prisma.user.update({
     where: { id },
-    data: { isActive: false },
+    data: {
+        isActive: false,
+        deletedAt: new Date(),
+    },
   });
 }
