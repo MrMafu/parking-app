@@ -21,8 +21,12 @@ export async function loginUser(
     },
   });
 
-  if (!user || !user.isActive) {
+  if (!user) {
     throw new Error("Invalid credentials");
+  }
+
+  if (!user.isActive) {
+    throw new Error("This user is inactive");
   }
 
   const isValid = await bcrypt.compare(password, user.password);
