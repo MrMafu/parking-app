@@ -30,7 +30,7 @@ auth.post("/login", async (c) => {
   }
 
   try {
-    const result = await loginUser(parsed.data.username, parsed.data.password);
+    const result = await loginUser(parsed.data.username, parsed.data.password, parsed.data.source);
 
     setCookie(c, "auth_token", result.accessToken, cookieOptions);
 

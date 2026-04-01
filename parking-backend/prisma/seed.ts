@@ -83,6 +83,9 @@ async function main() {
 
     { name: "logs.view", description: "View activity logs" },
     { name: "reports.view", description: "View reports" },
+
+    { name: "access_web", description: "Access the web dashboard" },
+    { name: "access_mobile", description: "Access the mobile app" },
   ];
 
   const seededPermissions = [];
@@ -100,7 +103,7 @@ async function main() {
   );
 
   // Role permissions
-  const adminPermissions = permissions.map((p) => p.name);
+  const adminPermissions = permissions.map((p) => p.name).filter((name) => name !== "access_mobile");
 
   const attendantPermissions = [
     "vehicles.view",
@@ -116,6 +119,7 @@ async function main() {
     "payments.manage",
     "receipts.view",
     "receipts.print",
+    "access_mobile",
   ];
 
   const ownerPermissions = [
@@ -124,6 +128,7 @@ async function main() {
     "receipts.view",
     "reports.view",
     "logs.view",
+    "access_mobile",
   ];
 
   async function assignPermissions(roleId: number, permissionNames: string[]) {
