@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
 import { signAccessToken } from "../lib/jwt";
+import { logActivity } from "../lib/activity-log";
 import type { PublicUser } from "../types/auth";
 
 export async function loginUser(
@@ -56,6 +57,8 @@ export async function loginUser(
       }
     }
   }
+
+  await logActivity(user.id, "login", source ? `source: ${source}` : undefined);
 
   const accessToken = await signAccessToken({
     sub: String(user.id),

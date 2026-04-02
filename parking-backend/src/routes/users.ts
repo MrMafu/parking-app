@@ -8,6 +8,7 @@ import {
   updateUser,
   deleteUser,
 } from "../services/user-service";
+import { logActivity } from "../lib/activity-log";
 import type { AuthEnv } from "../types/auth";
 
 const users = new Hono<AuthEnv>();
@@ -39,7 +40,9 @@ users.post("/", requireAuth, requirePermission("users.create"), async (c) => {
   }
 
   try {
+    const authUser = c.get("authUser");
     const user = await createUser(parsed.data);
+    await logActivity(Number(authUser.userId), "users.create", `Created user: ${user.username} (id: ${user.id})`);
     return c.json({ message: "User created", data: user }, 201);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Failed to create user";
@@ -64,7 +67,9 @@ users.patch("/:id", requireAuth, requirePermission("users.update"), async (c) =>
   }
 
   try {
+    const authUser = c.get("authUser");
     const user = await updateUser(id, parsed.data);
+    await logActivity(Number(authUser.userId), "users.update", `Updated user id: ${id}`);
     return c.json({ message: "User updated", data: user });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "";
@@ -84,7 +89,9 @@ users.delete("/:id", requireAuth, requirePermission("users.delete"), async (c) =
   if (isNaN(id)) return c.json({ message: "Invalid user ID" }, 400);
 
   try {
+    const authUser = c.get("authUser");
     await deleteUser(id);
+    await logActivity(Number(authUser.userId), "users.delete", `Deactivated user id: ${id}`);
     return c.json({ message: "User deactivated" });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "";
