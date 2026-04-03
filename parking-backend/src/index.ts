@@ -4,6 +4,7 @@ import { serve } from "@hono/node-server"
 import { cors } from "hono/cors"
 import auth from "./routes/auth"
 import users from "./routes/users"
+import vehicleTypes from "./routes/vehicle-types"
 
 const app = new Hono()
 
@@ -21,6 +22,7 @@ app.use(
 app.get("/health", (c) => c.json({ ok: true }));
 app.route("/auth", auth);
 app.route("/users", users);
+app.route("/vehicle-types", vehicleTypes);
 app.get("/", (c) => {
   return c.text("Hello Hono!")
 })
