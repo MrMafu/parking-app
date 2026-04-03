@@ -59,13 +59,14 @@ async function main() {
     { name: "vehicles.delete", description: "Delete vehicles" },
 
     { name: "rates.view", description: "View parking rates" },
-    { name: "rates.manage", description: "Manage parking rates" },
+    { name: "rates.create", description: "Create parking rates" },
+    { name: "rates.update", description: "Update parking rates" },
+    { name: "rates.delete", description: "Delete parking rates" },
 
     { name: "parking_areas.view", description: "View parking areas" },
-    { name: "parking_areas.manage", description: "Manage parking areas" },
-
-    { name: "parking_spots.view", description: "View parking spots" },
-    { name: "parking_spots.manage", description: "Manage parking spots" },
+    { name: "parking_areas.create", description: "Create parking areas" },
+    { name: "parking_areas.update", description: "Update parking areas" },
+    { name: "parking_areas.delete", description: "Delete parking areas" },
 
     { name: "transactions.view", description: "View transactions" },
     { name: "transactions.create", description: "Create transactions" },
@@ -103,14 +104,35 @@ async function main() {
   );
 
   // Role permissions
-  const adminPermissions = permissions.map((p) => p.name).filter((name) => name !== "access_mobile");
+  const adminPermissions = [
+    "users.view",
+    "users.create",
+    "users.update",
+    "users.delete",
+    "roles.view",
+    "roles.manage",
+    "vehicles.view",
+    "vehicles.create",
+    "vehicles.update",
+    "vehicles.delete",
+    "rates.view",
+    "rates.create",
+    "rates.update",
+    "rates.delete",
+    "parking_areas.view",
+    "parking_areas.create",
+    "parking_areas.update",
+    "parking_areas.delete",
+    "logs.view",
+    "reports.view",
+    "access_web",
+  ];
 
   const attendantPermissions = [
     "vehicles.view",
     "vehicles.create",
     "vehicles.update",
     "parking_areas.view",
-    "parking_spots.view",
     "transactions.view",
     "transactions.create",
     "transactions.update",
@@ -119,6 +141,8 @@ async function main() {
     "payments.manage",
     "receipts.view",
     "receipts.print",
+    "refunds.view",
+    "refunds.manage",
     "access_mobile",
   ];
 
@@ -126,6 +150,7 @@ async function main() {
     "transactions.view",
     "payments.view",
     "receipts.view",
+    "refunds.view",
     "reports.view",
     "logs.view",
     "access_mobile",
@@ -158,7 +183,6 @@ async function main() {
 
   // Admin user
   const adminPassword = await bcrypt.hash("admin123!", 10);
-
   await prisma.user.upsert({
     where: { username: "admin" },
     update: {},
@@ -168,6 +192,21 @@ async function main() {
       email: "admin@parking.local",
       password: adminPassword,
       roleId: adminRole.id,
+      isActive: true,
+    },
+  });
+
+  // Attendant user example
+  const attendantPassword = await bcrypt.hash("attendant123!", 10);
+  await prisma.user.upsert({
+    where: { username: "attendant1" },
+    update: {},
+    create: {
+      fullname: "Parking Attendant 1",
+      username: "attendant1",
+      email: "attendant1@parking.local",
+      password: attendantPassword,
+      roleId: attendantRole.id,
       isActive: true,
     },
   });
