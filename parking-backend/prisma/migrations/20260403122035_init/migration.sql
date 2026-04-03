@@ -116,7 +116,7 @@ CREATE TABLE "parking_areas" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "capacity" INTEGER NOT NULL,
-    "location" JSONB,
+    "location" TEXT,
     "status" "ParkingAreaStatus" NOT NULL DEFAULT 'Open',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,

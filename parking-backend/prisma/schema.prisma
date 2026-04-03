@@ -170,7 +170,7 @@ model ParkingArea {
   name      String
   capacity  Int
   // occupied count is computed from open transactions
-  location  Json?
+  location  String?
   status    ParkingAreaStatus @default(Open)
   createdAt DateTime          @default(now()) @map("created_at")
   updatedAt DateTime          @updatedAt @map("updated_at")
