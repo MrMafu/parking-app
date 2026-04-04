@@ -3,6 +3,7 @@ import { setCookie, deleteCookie } from "hono/cookie";
 import { loginSchema } from "../validators/auth-schema";
 import { loginUser, getPublicUserById } from "../services/auth-service";
 import { requireAuth } from "../middlewares/auth";
+import { logActivity } from "../lib/activity-log";
 import type { AuthEnv } from "../types/auth";
 
 const auth = new Hono<AuthEnv>();
@@ -30,7 +31,7 @@ auth.post("/login", async (c) => {
   }
 
   try {
-    const result = await loginUser(parsed.data.username, parsed.data.password);
+    const result = await loginUser(parsed.data.username, parsed.data.password, parsed.data.source);
 
     setCookie(c, "auth_token", result.accessToken, cookieOptions);
 
@@ -67,7 +68,10 @@ auth.get("/me", requireAuth, async (c) => {
   });
 });
 
-auth.post("/logout", async (c) => {
+auth.post("/logout", requireAuth, async (c) => {
+  const authUser = c.get("authUser");
+  await logActivity(Number(authUser.userId), "logout");
+
   deleteCookie(c, "auth_token", {
     path: "/",
   });

@@ -16,7 +16,6 @@ enum RateType {
   Hourly
   Daily
   Flat
-  PerSlot
 }
 
 enum ParkingAreaStatus {
@@ -43,24 +42,25 @@ enum PaymentStatus {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
+  id           Int       @id @default(autoincrement())
   fullname     String
-  username     String   @unique
-  email        String   @unique
-  password     String   @map("password")
-  roleId       Int      @map("role_id")
-  role         Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
-  isActive     Boolean  @default(true) @map("is_active")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  username     String    @unique
+  email        String    @unique
+  password     String    @map("password")
+  roleId       Int       @map("role_id")
+  role         Role      @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
 
   activityLogs         ActivityLog[]
   vehicles             Vehicle[]     @relation("VehiclesRegisteredBy")
-  createdTransactions  Transaction[] @relation("TransactionsCreatedBy")
   attendedTransactions Transaction[] @relation("TransactionsAttendedBy")
   printedReceipts      Receipt[]     @relation("ReceiptsPrintedBy")
   processedRefunds     Refund[]      @relation("RefundsProcessedBy")
 
+  @@index([roleId])
   @@map("users")
 }
 
@@ -108,6 +108,7 @@ model ActivityLog {
   details   String?
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@index([userId])
   @@map("activity_logs")
 }
 
@@ -138,6 +139,8 @@ model Vehicle {
 
   transactions   Transaction[]
 
+  @@index([vehicleTypeId])
+  @@index([registeredById])
   @@map("vehicles")
 }
 
@@ -149,6 +152,7 @@ model Rate {
   rateType      RateType    @map("rate_type")
   priceCents    Int         @map("price_cents")
   graceMinutes  Int         @default(0) @map("grace_minutes")
+  // validTo must be after validFrom — enforced at application layer
   validFrom     DateTime    @map("valid_from")
   validTo       DateTime    @map("valid_to")
   createdAt     DateTime    @default(now()) @map("created_at")
@@ -156,6 +160,7 @@ model Rate {
 
   transactions  Transaction[]
 
+  @@index([vehicleTypeId])
   @@map("rates")
 }
 
@@ -163,45 +168,25 @@ model ParkingArea {
   id        Int               @id @default(autoincrement())
   name      String
   capacity  Int
-  occupied  Int               @default(0)
-  location  Json?
+  // occupied count is computed from open transactions
+  location  String?
   status    ParkingAreaStatus @default(Open)
   createdAt DateTime          @default(now()) @map("created_at")
   updatedAt DateTime          @updatedAt @map("updated_at")
 
-  spots        ParkingSpot[]
   transactions Transaction[]
 
   @@map("parking_areas")
 }
 
-model ParkingSpot {
-  id         Int         @id @default(autoincrement())
-  areaId     Int         @map("area_id")
-  area       ParkingArea @relation(fields: [areaId], references: [id], onDelete: Restrict)
-  spotCode   String      @map("spot_code")
-  isOccupied Boolean     @default(false) @map("is_occupied")
-  createdAt  DateTime    @default(now()) @map("created_at")
-  updatedAt  DateTime    @updatedAt @map("updated_at")
-
-  transactions Transaction[]
-
-  @@unique([areaId, spotCode])
-  @@map("parking_spots")
-}
-
 model Transaction {
   id              Int               @id @default(autoincrement())
-  createdById     Int?              @map("created_by")
-  createdBy       User?             @relation("TransactionsCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   attendantId     Int?              @map("attendant_id")
   attendant       User?             @relation("TransactionsAttendedBy", fields: [attendantId], references: [id], onDelete: SetNull)
   vehicleId       Int               @map("vehicle_id")
   vehicle         Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
   areaId          Int               @map("area_id")
   parkingArea     ParkingArea       @relation(fields: [areaId], references: [id], onDelete: Restrict)
-  spotId          Int?              @map("spot_id")
-  parkingSpot     ParkingSpot?      @relation(fields: [spotId], references: [id], onDelete: SetNull)
   rateId          Int?              @map("rate_id")
   rate            Rate?             @relation(fields: [rateId], references: [id], onDelete: SetNull)
   rateSnapshot    Json?             @map("rate_snapshot")
@@ -216,6 +201,10 @@ model Transaction {
   payment  Payment?
   receipts Receipt[]
 
+  @@index([vehicleId])
+  @@index([areaId])
+  @@index([attendantId])
+  @@index([rateId])
   @@map("transactions")
 }
 
@@ -224,7 +213,6 @@ model Payment {
   transactionId     Int           @unique @map("transaction_id")
   transaction       Transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   paymentMethod     PaymentMethod @map("payment_method")
-  amountCents       Int           @map("amount_cents")
   status            PaymentStatus @default(Pending)
   providerReference String?       @map("provider_reference")
   processedAt       DateTime?     @map("processed_at")
@@ -250,6 +238,8 @@ model Receipt {
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @updatedAt @map("updated_at")
 
+  @@index([transactionId])
+  @@index([printedById])
   @@map("receipts")
 }
 
@@ -259,11 +249,12 @@ model Refund {
   payment       Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   amountCents   Int      @map("amount_cents")
   reason        String
-  processedById Int      @map("processed_by")
-  processedBy   User     @relation("RefundsProcessedBy", fields: [processedById], references: [id], onDelete: Restrict)
+  processedById Int?     @map("processed_by")
+  processedBy   User?    @relation("RefundsProcessedBy", fields: [processedById], references: [id], onDelete: SetNull)
   processedAt   DateTime @default(now()) @map("processed_at")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
+  @@index([processedById])
   @@map("refunds")
 }

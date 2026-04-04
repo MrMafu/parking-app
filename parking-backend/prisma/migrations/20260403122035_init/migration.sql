@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "RateType" AS ENUM ('Hourly', 'Daily', 'Flat', 'PerSlot');
+CREATE TYPE "RateType" AS ENUM ('Hourly', 'Daily', 'Flat');
 
 -- CreateEnum
 CREATE TYPE "ParkingAreaStatus" AS ENUM ('Open', 'Closed', 'Maintenance');
@@ -24,6 +24,7 @@ CREATE TABLE "users" (
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -115,8 +116,7 @@ CREATE TABLE "parking_areas" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "capacity" INTEGER NOT NULL,
-    "occupied" INTEGER NOT NULL DEFAULT 0,
-    "location" JSONB,
+    "location" TEXT,
     "status" "ParkingAreaStatus" NOT NULL DEFAULT 'Open',
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -125,25 +125,11 @@ CREATE TABLE "parking_areas" (
 );
 
 -- CreateTable
-CREATE TABLE "parking_spots" (
-    "id" SERIAL NOT NULL,
-    "area_id" INTEGER NOT NULL,
-    "spot_code" TEXT NOT NULL,
-    "is_occupied" BOOLEAN NOT NULL DEFAULT false,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "parking_spots_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "transactions" (
     "id" SERIAL NOT NULL,
-    "created_by" INTEGER,
     "attendant_id" INTEGER,
     "vehicle_id" INTEGER NOT NULL,
     "area_id" INTEGER NOT NULL,
-    "spot_id" INTEGER,
     "rate_id" INTEGER,
     "rate_snapshot" JSONB,
     "entry_time" TIMESTAMP(3) NOT NULL,
@@ -162,7 +148,6 @@ CREATE TABLE "payments" (
     "id" SERIAL NOT NULL,
     "transaction_id" INTEGER NOT NULL,
     "payment_method" "PaymentMethod" NOT NULL,
-    "amount_cents" INTEGER NOT NULL,
     "status" "PaymentStatus" NOT NULL DEFAULT 'Pending',
     "provider_reference" TEXT,
     "processed_at" TIMESTAMP(3),
@@ -192,7 +177,7 @@ CREATE TABLE "refunds" (
     "payment_id" INTEGER NOT NULL,
     "amount_cents" INTEGER NOT NULL,
     "reason" TEXT NOT NULL,
-    "processed_by" INTEGER NOT NULL,
+    "processed_by" INTEGER,
     "processed_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -207,10 +192,16 @@ CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
+CREATE INDEX "users_role_id_idx" ON "users"("role_id");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "permissions_name_key" ON "permissions"("name");
+
+-- CreateIndex
+CREATE INDEX "activity_logs_user_id_idx" ON "activity_logs"("user_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "vehicle_types_name_key" ON "vehicle_types"("name");
@@ -219,7 +210,25 @@ CREATE UNIQUE INDEX "vehicle_types_name_key" ON "vehicle_types"("name");
 CREATE UNIQUE INDEX "vehicles_license_plate_key" ON "vehicles"("license_plate");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "parking_spots_area_id_spot_code_key" ON "parking_spots"("area_id", "spot_code");
+CREATE INDEX "vehicles_vehicle_type_id_idx" ON "vehicles"("vehicle_type_id");
+
+-- CreateIndex
+CREATE INDEX "vehicles_registered_by_idx" ON "vehicles"("registered_by");
+
+-- CreateIndex
+CREATE INDEX "rates_vehicle_type_id_idx" ON "rates"("vehicle_type_id");
+
+-- CreateIndex
+CREATE INDEX "transactions_vehicle_id_idx" ON "transactions"("vehicle_id");
+
+-- CreateIndex
+CREATE INDEX "transactions_area_id_idx" ON "transactions"("area_id");
+
+-- CreateIndex
+CREATE INDEX "transactions_attendant_id_idx" ON "transactions"("attendant_id");
+
+-- CreateIndex
+CREATE INDEX "transactions_rate_id_idx" ON "transactions"("rate_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "payments_transaction_id_key" ON "payments"("transaction_id");
@@ -228,7 +237,16 @@ CREATE UNIQUE INDEX "payments_transaction_id_key" ON "payments"("transaction_id"
 CREATE UNIQUE INDEX "receipts_payment_id_key" ON "receipts"("payment_id");
 
 -- CreateIndex
+CREATE INDEX "receipts_transaction_id_idx" ON "receipts"("transaction_id");
+
+-- CreateIndex
+CREATE INDEX "receipts_printed_by_idx" ON "receipts"("printed_by");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "refunds_payment_id_key" ON "refunds"("payment_id");
+
+-- CreateIndex
+CREATE INDEX "refunds_processed_by_idx" ON "refunds"("processed_by");
 
 -- AddForeignKey
 ALTER TABLE "users" ADD CONSTRAINT "users_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -252,12 +270,6 @@ ALTER TABLE "vehicles" ADD CONSTRAINT "vehicles_registered_by_fkey" FOREIGN KEY 
 ALTER TABLE "rates" ADD CONSTRAINT "rates_vehicle_type_id_fkey" FOREIGN KEY ("vehicle_type_id") REFERENCES "vehicle_types"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "parking_spots" ADD CONSTRAINT "parking_spots_area_id_fkey" FOREIGN KEY ("area_id") REFERENCES "parking_areas"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "transactions" ADD CONSTRAINT "transactions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_attendant_id_fkey" FOREIGN KEY ("attendant_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -265,9 +277,6 @@ ALTER TABLE "transactions" ADD CONSTRAINT "transactions_vehicle_id_fkey" FOREIGN
 
 -- AddForeignKey
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_area_id_fkey" FOREIGN KEY ("area_id") REFERENCES "parking_areas"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "transactions" ADD CONSTRAINT "transactions_spot_id_fkey" FOREIGN KEY ("spot_id") REFERENCES "parking_spots"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_rate_id_fkey" FOREIGN KEY ("rate_id") REFERENCES "rates"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -288,4 +297,4 @@ ALTER TABLE "receipts" ADD CONSTRAINT "receipts_printed_by_fkey" FOREIGN KEY ("p
 ALTER TABLE "refunds" ADD CONSTRAINT "refunds_payment_id_fkey" FOREIGN KEY ("payment_id") REFERENCES "payments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "refunds" ADD CONSTRAINT "refunds_processed_by_fkey" FOREIGN KEY ("processed_by") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "refunds" ADD CONSTRAINT "refunds_processed_by_fkey" FOREIGN KEY ("processed_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;

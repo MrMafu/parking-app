@@ -2,7 +2,7 @@ import "dotenv/config"
 import { Hono } from "hono"
 import { serve } from "@hono/node-server"
 import { cors } from "hono/cors"
-import auth from "./routes/auth"
+import router from "./routes"
 
 const app = new Hono()
 
@@ -18,7 +18,7 @@ app.use(
 );
 
 app.get("/health", (c) => c.json({ ok: true }));
-app.route("/auth", auth);
+app.route("/", router);
 app.get("/", (c) => {
   return c.text("Hello Hono!")
 })
