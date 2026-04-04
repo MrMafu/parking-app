@@ -6,13 +6,11 @@ export type ParkingAreaDetail = {
   name: string;
   capacity: number;
   occupied: number;
-  location: string;
+  location: string | null;
   status: ParkingAreaStatus;
   createdAt: Date;
   updatedAt: Date;
 };
-
-type ParkingAreaRow = Omit<ParkingAreaDetail, "occupied">;
 
 const parkingAreaSelect = {
   id: true,
@@ -24,7 +22,7 @@ const parkingAreaSelect = {
   updatedAt: true,
 } as const;
 
-async function withOccupied(area: ParkingAreaRow): Promise<ParkingAreaDetail> {
+async function withOccupied(area: Omit<ParkingAreaDetail, "occupied">): Promise<ParkingAreaDetail> {
   const occupied = await prisma.transaction.count({
     where: { areaId: area.id, status: "Open" },
   });
@@ -36,9 +34,7 @@ export async function listParkingAreas(): Promise<ParkingAreaDetail[]> {
     select: parkingAreaSelect,
     orderBy: { id: "asc" },
   });
-  return Promise.all(
-    (areas as unknown as ParkingAreaRow[]).map(withOccupied)
-  );
+  return Promise.all(areas.map(withOccupied));
 }
 
 export async function getParkingAreaById(
@@ -49,21 +45,20 @@ export async function getParkingAreaById(
     select: parkingAreaSelect,
   });
   if (!area) return null;
-  return withOccupied(area as unknown as ParkingAreaRow);
+  return withOccupied(area);
 }
 
 export async function createParkingArea(data: {
   name: string;
   capacity: number;
-  location?: string;
+  location?: string | null;
   status?: ParkingAreaStatus;
 }): Promise<ParkingAreaDetail> {
   const area = await prisma.parkingArea.create({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: data as any,
+    data,
     select: parkingAreaSelect,
   });
-  return withOccupied(area as unknown as ParkingAreaRow);
+  return withOccupied(area);
 }
 
 export async function updateParkingArea(
@@ -71,17 +66,16 @@ export async function updateParkingArea(
   data: {
     name?: string;
     capacity?: number;
-    location?: string;
+    location?: string | null;
     status?: ParkingAreaStatus;
   }
 ): Promise<ParkingAreaDetail> {
   const area = await prisma.parkingArea.update({
     where: { id },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    data: data as any,
+    data,
     select: parkingAreaSelect,
   });
-  return withOccupied(area as unknown as ParkingAreaRow);
+  return withOccupied(area);
 }
 
 export async function deleteParkingArea(id: number): Promise<void> {
