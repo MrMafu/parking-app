@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const rateTypeValues = ["Hourly", "Daily", "Flat", "PerSlot"] as const;
+const rateTypeValues = ["Hourly", "Daily", "Flat"] as const;
 
 export const createRateSchema = z
   .object({

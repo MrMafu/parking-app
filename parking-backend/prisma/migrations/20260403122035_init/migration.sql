@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "RateType" AS ENUM ('Hourly', 'Daily', 'Flat', 'PerSlot');
+CREATE TYPE "RateType" AS ENUM ('Hourly', 'Daily', 'Flat');
 
 -- CreateEnum
 CREATE TYPE "ParkingAreaStatus" AS ENUM ('Open', 'Closed', 'Maintenance');

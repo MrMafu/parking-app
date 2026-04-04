@@ -16,7 +16,6 @@ enum RateType {
   Hourly
   Daily
   Flat
-  PerSlot
 }
 
 enum ParkingAreaStatus {
