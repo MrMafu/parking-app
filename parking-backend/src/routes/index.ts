@@ -5,6 +5,7 @@ import vehicleTypes from "./vehicle-types";
 import vehicles from "./vehicles";
 import rates from "./rates";
 import parkingAreas from "./parking-areas";
+import activityLogs from "./activity-logs";
 
 const router = new Hono();
 
@@ -14,5 +15,6 @@ router.route("/vehicle-types", vehicleTypes);
 router.route("/vehicles", vehicles);
 router.route("/rates", rates);
 router.route("/parking-areas", parkingAreas);
+router.route("/activity-logs", activityLogs);
 
 export default router;
