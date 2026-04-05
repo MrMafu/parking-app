@@ -43,3 +43,11 @@ export type Rate = {
   validFrom: string;
   validTo: string;
 };
+
+export type ActivityLog = {
+  id: number;
+  action: string;
+  details: string | null;
+  createdAt: string;
+  user: { id: number; fullname: string; username: string };
+};
