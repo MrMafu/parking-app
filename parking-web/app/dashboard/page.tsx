@@ -4,6 +4,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 import type { ParkingArea, Vehicle, VehicleType, Rate, PublicUser, ActivityLog } from "@/types";
+import {
+  Building2,
+  LayoutGrid,
+  BarChart3,
+  Car,
+  Users,
+  CircleDollarSign,
+  Tag,
+  type LucideIcon,
+} from "lucide-react";
 
 const STATUS_STYLES: Record<ParkingArea["status"], string> = {
   Open: "bg-success text-white",
@@ -87,42 +97,42 @@ export default function DashboardPage() {
           value={areas.length}
           sub={`${activeAreas} open`}
           color="bg-primary"
-          icon={<path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />}
+          icon={Building2}
         />
         <StatCard
           label="Total Capacity"
           value={totalCapacity}
           sub="parking slots"
           color="bg-secondary"
-          icon={<path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />}
+          icon={LayoutGrid}
         />
         <StatCard
           label="Occupancy"
           value={`${occupancyPct}%`}
           sub={`${totalOccupied} / ${totalCapacity} slots`}
           color={occupancyPct > 80 ? "bg-danger" : occupancyPct > 50 ? "bg-warning" : "bg-success"}
-          icon={<path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />}
+          icon={BarChart3}
         />
         <StatCard
           label="Vehicles"
           value={vehicles.length}
           sub="registered"
           color="bg-tertiary"
-          icon={<path strokeLinecap="round" strokeLinejoin="round" d="M8 17h.01M16 17h.01M2 9h20M5 20h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2zM6 9V6a2 2 0 012-2h8a2 2 0 012 2v3" />}
+          icon={Car}
         />
         <StatCard
           label="Users"
           value={activeUsers}
           sub={`of ${users.length} total`}
           color="bg-dark"
-          icon={<path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />}
+          icon={Users}
         />
         <StatCard
           label="Active Rates"
           value={activeRates}
           sub={`of ${rates.length} total`}
           color="bg-success"
-          icon={<path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />}
+          icon={CircleDollarSign}
         />
       </div>
 
@@ -220,9 +230,7 @@ export default function DashboardPage() {
                 return (
                   <div key={vt.id} className="px-5 py-4 flex items-center gap-4">
                     <div className="w-9 h-9 rounded-xl bg-tertiary/10 flex items-center justify-center shrink-0">
-                      <svg className="w-4 h-4 text-tertiary" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
-                      </svg>
+                      <Tag className="w-4 h-4 text-tertiary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
@@ -285,20 +293,18 @@ function StatCard({
   value,
   sub,
   color,
-  icon,
+  icon: Icon,
 }: {
   label: string;
   value: string | number;
   sub: string;
   color: string;
-  icon: React.ReactNode;
+  icon: LucideIcon;
 }) {
   return (
     <div className="bg-white rounded-2xl border border-light-shade p-5 flex flex-col gap-3">
       <div className={`w-9 h-9 rounded-xl ${color} flex items-center justify-center`}>
-        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-          {icon}
-        </svg>
+        <Icon className="w-4 h-4 text-white" />
       </div>
       <div>
         <p className="text-2xl font-bold text-dark">{value}</p>

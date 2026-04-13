@@ -4,47 +4,31 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuthContext } from "@/context/AuthContext";
 import type { PublicUser } from "@/types";
+import {
+  LayoutDashboard,
+  Building2,
+  Tag,
+  Car,
+  CircleDollarSign,
+  Users,
+  ClipboardList,
+  LogOut,
+  ParkingSquare,
+  type LucideIcon,
+} from "lucide-react";
 
 type Props = {
   user: PublicUser;
 };
 
-const NAV_ITEMS = [
-  {
-    href: "/dashboard",
-    label: "Dashboard",
-    icon: "M3 12l2-2m0 0l7-7 7 7m-9 5v6h4v-6m-4 0H7m10 0h-4",
-  },
-  {
-    href: "/dashboard/parking-areas",
-    label: "Parking Areas",
-    icon: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4",
-  },
-  {
-    href: "/dashboard/vehicle-types",
-    label: "Vehicle Types",
-    icon: "M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z",
-  },
-  {
-    href: "/dashboard/vehicles",
-    label: "Vehicles",
-    icon: "M8 17h.01M16 17h.01M2 9h20M5 20h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2v9a2 2 0 002 2zM6 9V6a2 2 0 012-2h8a2 2 0 012 2v3",
-  },
-  {
-    href: "/dashboard/rates",
-    label: "Rates",
-    icon: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z",
-  },
-  {
-    href: "/dashboard/users",
-    label: "Users",
-    icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z",
-  },
-  {
-    href: "/dashboard/activity-logs",
-    label: "Activity Logs",
-    icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01m-.01 4h.01",
-  },
+const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard/parking-areas", label: "Parking Areas", icon: Building2 },
+  { href: "/dashboard/vehicle-types", label: "Vehicle Types", icon: Tag },
+  { href: "/dashboard/vehicles", label: "Vehicles", icon: Car },
+  { href: "/dashboard/rates", label: "Rates", icon: CircleDollarSign },
+  { href: "/dashboard/users", label: "Users", icon: Users },
+  { href: "/dashboard/activity-logs", label: "Activity Logs", icon: ClipboardList },
 ];
 
 export default function Sidebar({ user }: Props) {
@@ -57,19 +41,7 @@ export default function Sidebar({ user }: Props) {
       <div className="px-5 py-6 border-b border-light-shade space-y-4">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shrink-0">
-            <svg
-              className="w-5 h-5 text-white"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 10l-.553-1.106A2 2 0 016.237 6h11.526a2 2 0 011.79 2.894L19 10M5 10h14M5 10v8a2 2 0 002 2h10a2 2 0 002-2v-8M9 14h.01M15 14h.01"
-              />
-            </svg>
+            <ParkingSquare className="w-5 h-5 text-white" />
           </div>
           <span className="font-bold text-dark leading-tight">Parking Management</span>
         </div>
@@ -90,9 +62,7 @@ export default function Sidebar({ user }: Props) {
             title="Logout"
             className="shrink-0 p-1.5 rounded-lg text-medium hover:bg-light hover:text-dark transition"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1" />
-            </svg>
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -104,6 +74,7 @@ export default function Sidebar({ user }: Props) {
             item.href === "/dashboard"
               ? pathname === "/dashboard"
               : pathname.startsWith(item.href);
+          const Icon = item.icon;
           return (
             <Link
               key={item.href}
@@ -114,9 +85,7 @@ export default function Sidebar({ user }: Props) {
                   : "text-medium hover:bg-light hover:text-dark"
               }`}
             >
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-              </svg>
+              <Icon className="w-4 h-4 shrink-0" />
               {item.label}
             </Link>
           );
