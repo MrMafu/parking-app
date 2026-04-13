@@ -25,16 +25,17 @@ export default function UsersPage() {
   const [deleting, setDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
-    const res = await apiFetch("/users");
-    if (res.ok) {
-      const d = await res.json();
+    const [usersRes, rolesRes] = await Promise.all([
+      apiFetch("/users"),
+      apiFetch("/roles"),
+    ]);
+    if (usersRes.ok) {
+      const d = await usersRes.json();
       setUsers(d.data);
-      // Extract unique roles from users
-      const rolesMap = new Map<number, Role>();
-      for (const u of d.data) {
-        if (u.role) rolesMap.set(u.role.id, u.role);
-      }
-      setRoles(Array.from(rolesMap.values()));
+    }
+    if (rolesRes.ok) {
+      const d = await rolesRes.json();
+      setRoles(d.data.map((r: { id: number; name: string }) => ({ id: r.id, name: r.name })));
     }
     setLoading(false);
   }, []);
