@@ -51,3 +51,16 @@ export type ActivityLog = {
   createdAt: string;
   user: { id: number; fullname: string; username: string };
 };
+
+export type Permission = {
+  id: number;
+  name: string;
+  description: string | null;
+};
+
+export type Role = {
+  id: number;
+  name: string;
+  description: string | null;
+  permissions: Permission[];
+};

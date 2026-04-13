@@ -14,6 +14,7 @@ import {
   ClipboardList,
   LogOut,
   ParkingSquare,
+  Shield,
   type LucideIcon,
 } from "lucide-react";
 
@@ -28,6 +29,7 @@ const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/dashboard/vehicles", label: "Vehicles", icon: Car },
   { href: "/dashboard/rates", label: "Rates", icon: CircleDollarSign },
   { href: "/dashboard/users", label: "Users", icon: Users },
+  { href: "/dashboard/roles", label: "Roles & Permissions", icon: Shield },
   { href: "/dashboard/activity-logs", label: "Activity Logs", icon: ClipboardList },
 ];
 
