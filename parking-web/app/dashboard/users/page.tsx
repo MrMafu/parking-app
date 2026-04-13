@@ -7,6 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import RequirePermission from "@/components/RequirePermission";
 
 type Role = { id: number; name: string };
 
@@ -131,7 +132,7 @@ export default function UsersPage() {
   ];
 
   return (
-    <>
+    <RequirePermission permission="users.view">
       <PageHeader
         title="Users"
         action={
@@ -196,6 +197,6 @@ export default function UsersPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
-    </>
+    </RequirePermission>
   );
 }

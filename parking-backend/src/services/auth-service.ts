@@ -78,6 +78,9 @@ export async function loginUser(
         id: user.role.id,
         name: user.role.name,
       },
+      permissions: user.role.rolePerms.map(
+        (rp: { permission: { name: string } }) => rp.permission.name
+      ),
     },
   };
 }
@@ -85,7 +88,15 @@ export async function loginUser(
 export async function getPublicUserById(userId: number): Promise<{ user: PublicUser } | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: { role: true },
+    include: {
+      role: {
+        include: {
+          rolePerms: {
+            include: { permission: true },
+          },
+        },
+      },
+    },
   });
 
   if (!user || !user.isActive) return null;
@@ -100,6 +111,9 @@ export async function getPublicUserById(userId: number): Promise<{ user: PublicU
         id: user.role.id,
         name: user.role.name,
       },
+      permissions: user.role.rolePerms.map(
+        (rp: { permission: { name: string } }) => rp.permission.name
+      ),
     },
   };
 }

@@ -7,6 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import RequirePermission from "@/components/RequirePermission";
 
 const STATUS_OPTIONS = ["Open", "Closed", "Maintenance"] as const;
 const STATUS_STYLES: Record<ParkingArea["status"], string> = {
@@ -130,7 +131,7 @@ export default function ParkingAreasPage() {
   ];
 
   return (
-    <>
+    <RequirePermission permission="parking_areas.view">
       <PageHeader
         title="Parking Areas"
         action={
@@ -178,6 +179,6 @@ export default function ParkingAreasPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
-    </>
+    </RequirePermission>
   );
 }

@@ -5,6 +5,7 @@ export type PublicUser = {
   email: string;
   role: { id: number; name: string };
   isActive: boolean;
+  permissions: string[];
 };
 
 export type ParkingArea = {

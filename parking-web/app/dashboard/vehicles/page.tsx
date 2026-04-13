@@ -7,6 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import RequirePermission from "@/components/RequirePermission";
 
 const emptyForm = { licensePlate: "", vehicleTypeId: "", color: "", ownerName: "" };
 
@@ -118,7 +119,7 @@ export default function VehiclesPage() {
   ];
 
   return (
-    <>
+    <RequirePermission permission="vehicles.view">
       <PageHeader
         title="Vehicles"
         action={
@@ -167,6 +168,6 @@ export default function VehiclesPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
-    </>
+    </RequirePermission>
   );
 }

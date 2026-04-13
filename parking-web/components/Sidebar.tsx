@@ -22,20 +22,24 @@ type Props = {
   user: PublicUser;
 };
 
-const NAV_ITEMS: { href: string; label: string; icon: LucideIcon }[] = [
+const NAV_ITEMS: { href: string; label: string; icon: LucideIcon; permission?: string }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/parking-areas", label: "Parking Areas", icon: Building2 },
-  { href: "/dashboard/vehicle-types", label: "Vehicle Types", icon: Tag },
-  { href: "/dashboard/vehicles", label: "Vehicles", icon: Car },
-  { href: "/dashboard/rates", label: "Rates", icon: CircleDollarSign },
-  { href: "/dashboard/users", label: "Users", icon: Users },
-  { href: "/dashboard/roles", label: "Roles & Permissions", icon: Shield },
-  { href: "/dashboard/activity-logs", label: "Activity Logs", icon: ClipboardList },
+  { href: "/dashboard/parking-areas", label: "Parking Areas", icon: Building2, permission: "parking_areas.view" },
+  { href: "/dashboard/vehicle-types", label: "Vehicle Types", icon: Tag, permission: "vehicles.view" },
+  { href: "/dashboard/vehicles", label: "Vehicles", icon: Car, permission: "vehicles.view" },
+  { href: "/dashboard/rates", label: "Rates", icon: CircleDollarSign, permission: "rates.view" },
+  { href: "/dashboard/users", label: "Users", icon: Users, permission: "users.view" },
+  { href: "/dashboard/roles", label: "Roles & Permissions", icon: Shield, permission: "roles.view" },
+  { href: "/dashboard/activity-logs", label: "Activity Logs", icon: ClipboardList, permission: "logs.view" },
 ];
 
 export default function Sidebar({ user }: Props) {
-  const { logout } = useAuthContext();
+  const { logout, hasPermission } = useAuthContext();
   const pathname = usePathname();
+
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => !item.permission || hasPermission(item.permission)
+  );
 
   return (
     <aside className="w-64 shrink-0 min-h-screen bg-white border-r border-light-shade flex flex-col">
@@ -71,7 +75,7 @@ export default function Sidebar({ user }: Props) {
 
       {/* Nav links */}
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const active =
             item.href === "/dashboard"
               ? pathname === "/dashboard"

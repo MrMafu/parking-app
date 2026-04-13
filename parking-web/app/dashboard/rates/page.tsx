@@ -7,6 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import RequirePermission from "@/components/RequirePermission";
 
 const RATE_TYPES = ["Hourly", "Daily", "Flat"] as const;
 type FormState = { name: string; vehicleTypeId: string; rateType: Rate["rateType"]; priceCents: string; graceMinutes: string; validFrom: string; validTo: string };
@@ -139,7 +140,7 @@ export default function RatesPage() {
   ];
 
   return (
-    <>
+    <RequirePermission permission="rates.view">
       <PageHeader
         title="Rates"
         action={
@@ -208,6 +209,6 @@ export default function RatesPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
-    </>
+    </RequirePermission>
   );
 }

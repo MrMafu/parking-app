@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
 import PageHeader from "@/components/ui/PageHeader";
+import RequirePermission from "@/components/RequirePermission";
 
 type ActivityLog = {
   id: number;
@@ -42,7 +43,7 @@ export default function ActivityLogsPage() {
   }, [fetchData]);
 
   return (
-    <>
+    <RequirePermission permission="logs.view">
       <PageHeader
         title="Activity Logs"
         action={
@@ -99,6 +100,6 @@ export default function ActivityLogsPage() {
           </table>
         </div>
       )}
-    </>
+    </RequirePermission>
   );
 }

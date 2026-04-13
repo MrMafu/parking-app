@@ -10,6 +10,7 @@ type AuthContextType = {
   loading: boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  hasPermission: (perm: string) => boolean;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -36,8 +37,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.replace("/login");
   };
 
+  const hasPermission = useCallback(
+    (perm: string) => !!user?.permissions?.includes(perm),
+    [user]
+  );
+
   return (
-    <AuthContext.Provider value={{ user, loading, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, logout, refreshUser, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

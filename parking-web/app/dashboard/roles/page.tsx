@@ -7,6 +7,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { ChevronDown, ChevronUp, Shield } from "lucide-react";
+import RequirePermission from "@/components/RequirePermission";
 
 const emptyForm = { name: "", description: "", permissionIds: [] as number[] };
 
@@ -124,7 +125,7 @@ export default function RolesPage() {
   if (loading) return <p className="text-medium text-sm">Loading...</p>;
 
   return (
-    <>
+    <RequirePermission permission="roles.view">
       <PageHeader
         title="Roles & Permissions"
         action={
@@ -313,6 +314,6 @@ export default function RolesPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
-    </>
+    </RequirePermission>
   );
 }
