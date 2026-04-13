@@ -22,6 +22,7 @@ export default function VehiclesPage() {
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(new Set());
 
   const fetchData = useCallback(async () => {
     const [vRes, vtRes] = await Promise.all([
@@ -101,13 +102,26 @@ export default function VehiclesPage() {
     fetchData();
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedKeys.size === 0) return;
+    setDeleting(true);
+    await Promise.all(
+      Array.from(selectedKeys).map((id) =>
+        apiFetch(`/vehicles/${id}`, { method: "DELETE" })
+      )
+    );
+    setDeleting(false);
+    setSelectedKeys(new Set());
+    fetchData();
+  };
+
   if (loading) return <p className="text-medium text-sm">Loading...</p>;
 
   const columns = [
-    { key: "plate", label: "License Plate", render: (v: Vehicle) => <span className="font-medium text-dark">{v.licensePlate}</span> },
-    { key: "type", label: "Type", render: (v: Vehicle) => <span className="text-dark">{v.vehicleType?.name ?? "—"}</span> },
-    { key: "color", label: "Color", render: (v: Vehicle) => <span className="text-dark">{v.color}</span> },
-    { key: "owner", label: "Owner", className: "hidden md:table-cell", render: (v: Vehicle) => <span className="text-medium">{v.ownerName}</span> },
+    { key: "plate", label: "License Plate", sortable: true, sortValue: (v: Vehicle) => v.licensePlate, render: (v: Vehicle) => <span className="font-medium text-dark">{v.licensePlate}</span> },
+    { key: "type", label: "Type", sortable: true, sortValue: (v: Vehicle) => v.vehicleType?.name ?? "", render: (v: Vehicle) => <span className="text-dark">{v.vehicleType?.name ?? "—"}</span> },
+    { key: "color", label: "Color", sortable: true, sortValue: (v: Vehicle) => v.color, render: (v: Vehicle) => <span className="text-dark">{v.color}</span> },
+    { key: "owner", label: "Owner", sortable: true, sortValue: (v: Vehicle) => v.ownerName, className: "hidden md:table-cell", render: (v: Vehicle) => <span className="text-medium">{v.ownerName}</span> },
     {
       key: "actions", label: "", render: (v: Vehicle) => (
         <div className="flex gap-2 justify-end">
@@ -129,7 +143,23 @@ export default function VehiclesPage() {
         }
       />
 
-      <DataTable columns={columns} data={vehicles} keyField="id" emptyMessage="No vehicles found." />
+      <DataTable
+        columns={columns}
+        data={vehicles}
+        keyField="id"
+        emptyMessage="No vehicles found."
+        searchable
+        searchPlaceholder="Search vehicles..."
+        searchFn={(v, q) => v.licensePlate.toLowerCase().includes(q) || v.ownerName.toLowerCase().includes(q) || v.color.toLowerCase().includes(q) || (v.vehicleType?.name ?? "").toLowerCase().includes(q)}
+        selectable
+        selectedKeys={selectedKeys}
+        onSelectionChange={setSelectedKeys}
+        toolbar={
+          <button onClick={handleBulkDelete} disabled={deleting} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-danger text-white hover:bg-danger-shade transition disabled:opacity-60">
+            Delete Selected
+          </button>
+        }
+      />
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Vehicle" : "Add Vehicle"}>
         <form onSubmit={handleSubmit} className="space-y-4">

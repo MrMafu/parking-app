@@ -29,6 +29,7 @@ export default function ParkingAreasPage() {
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<ParkingArea | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(new Set());
 
   const fetchData = useCallback(async () => {
     const res = await apiFetch("/parking-areas");
@@ -96,14 +97,27 @@ export default function ParkingAreasPage() {
     fetchData();
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedKeys.size === 0) return;
+    setDeleting(true);
+    await Promise.all(
+      Array.from(selectedKeys).map((id) =>
+        apiFetch(`/parking-areas/${id}`, { method: "DELETE" })
+      )
+    );
+    setDeleting(false);
+    setSelectedKeys(new Set());
+    fetchData();
+  };
+
   if (loading) return <p className="text-medium text-sm">Loading...</p>;
 
   const columns = [
-    { key: "name", label: "Name", render: (a: ParkingArea) => <span className="font-medium text-dark">{a.name}</span> },
-    { key: "location", label: "Location", className: "hidden md:table-cell", render: (a: ParkingArea) => <span className="text-medium">{a.location ?? "—"}</span> },
-    { key: "capacity", label: "Capacity", render: (a: ParkingArea) => <span className="text-dark">{a.capacity}</span> },
+    { key: "name", label: "Name", sortable: true, sortValue: (a: ParkingArea) => a.name, render: (a: ParkingArea) => <span className="font-medium text-dark">{a.name}</span> },
+    { key: "location", label: "Location", sortable: true, sortValue: (a: ParkingArea) => a.location ?? "", className: "hidden md:table-cell", render: (a: ParkingArea) => <span className="text-medium">{a.location ?? "—"}</span> },
+    { key: "capacity", label: "Capacity", sortable: true, sortValue: (a: ParkingArea) => a.capacity, render: (a: ParkingArea) => <span className="text-dark">{a.capacity}</span> },
     {
-      key: "occupancy", label: "Occupancy", render: (a: ParkingArea) => {
+      key: "occupancy", label: "Occupancy", sortable: true, sortValue: (a: ParkingArea) => a.capacity > 0 ? a.occupied / a.capacity : 0, render: (a: ParkingArea) => {
         const pct = a.capacity > 0 ? Math.round((a.occupied / a.capacity) * 100) : 0;
         return (
           <div className="flex items-center gap-3">
@@ -116,7 +130,7 @@ export default function ParkingAreasPage() {
       }
     },
     {
-      key: "status", label: "Status", render: (a: ParkingArea) => (
+      key: "status", label: "Status", sortable: true, sortValue: (a: ParkingArea) => a.status, render: (a: ParkingArea) => (
         <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[a.status]}`}>{a.status}</span>
       )
     },
@@ -141,7 +155,23 @@ export default function ParkingAreasPage() {
         }
       />
 
-      <DataTable columns={columns} data={areas} keyField="id" emptyMessage="No parking areas found." />
+      <DataTable
+        columns={columns}
+        data={areas}
+        keyField="id"
+        emptyMessage="No parking areas found."
+        searchable
+        searchPlaceholder="Search areas..."
+        searchFn={(a, q) => a.name.toLowerCase().includes(q) || (a.location ?? "").toLowerCase().includes(q) || a.status.toLowerCase().includes(q)}
+        selectable
+        selectedKeys={selectedKeys}
+        onSelectionChange={setSelectedKeys}
+        toolbar={
+          <button onClick={handleBulkDelete} disabled={deleting} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-danger text-white hover:bg-danger-shade transition disabled:opacity-60">
+            Delete Selected
+          </button>
+        }
+      />
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Parking Area" : "Add Parking Area"}>
         <form onSubmit={handleSubmit} className="space-y-4">

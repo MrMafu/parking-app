@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
 import PageHeader from "@/components/ui/PageHeader";
+import DataTable from "@/components/ui/DataTable";
 import RequirePermission from "@/components/RequirePermission";
 
 type ActivityLog = {
@@ -27,6 +28,7 @@ function formatDateTime(iso: string) {
 export default function ActivityLogsPage() {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(new Set());
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -41,6 +43,51 @@ export default function ActivityLogsPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  if (loading) return <p className="text-medium text-sm">Loading...</p>;
+
+  const columns = [
+    {
+      key: "createdAt",
+      label: "Time",
+      sortable: true,
+      sortValue: (log: ActivityLog) => new Date(log.createdAt).getTime(),
+      render: (log: ActivityLog) => (
+        <span className="text-medium whitespace-nowrap text-xs">{formatDateTime(log.createdAt)}</span>
+      ),
+    },
+    {
+      key: "user",
+      label: "User",
+      sortable: true,
+      sortValue: (log: ActivityLog) => log.user.fullname,
+      render: (log: ActivityLog) => (
+        <div>
+          <p className="font-medium text-dark">{log.user.fullname}</p>
+          <p className="text-xs text-medium">{log.user.username}</p>
+        </div>
+      ),
+    },
+    {
+      key: "action",
+      label: "Action",
+      sortable: true,
+      sortValue: (log: ActivityLog) => log.action,
+      render: (log: ActivityLog) => (
+        <span className="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium bg-primary/10 text-primary">
+          {log.action}
+        </span>
+      ),
+    },
+    {
+      key: "details",
+      label: "Details",
+      className: "hidden lg:table-cell",
+      render: (log: ActivityLog) => (
+        <span className="text-medium text-xs">{log.details ?? "—"}</span>
+      ),
+    },
+  ];
 
   return (
     <RequirePermission permission="logs.view">
@@ -57,49 +104,19 @@ export default function ActivityLogsPage() {
         }
       />
 
-      {loading ? (
-        <p className="text-medium text-sm">Loading...</p>
-      ) : logs.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-light-shade p-8 text-center text-medium text-sm">
-          No activity logs found.
-        </div>
-      ) : (
-        <div className="bg-white rounded-2xl border border-light-shade overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-light-shade bg-light">
-                <th className="text-left px-5 py-3 font-medium text-medium">Time</th>
-                <th className="text-left px-5 py-3 font-medium text-medium">User</th>
-                <th className="text-left px-5 py-3 font-medium text-medium">Action</th>
-                <th className="text-left px-5 py-3 font-medium text-medium hidden lg:table-cell">Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map((log, i) => (
-                <tr key={log.id} className={i !== logs.length - 1 ? "border-b border-light-shade" : ""}>
-                  <td className="px-5 py-3 text-medium whitespace-nowrap text-xs">
-                    {formatDateTime(log.createdAt)}
-                  </td>
-                  <td className="px-5 py-3">
-                    <div>
-                      <p className="font-medium text-dark">{log.user.fullname}</p>
-                      <p className="text-xs text-medium">{log.user.username}</p>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium bg-primary/10 text-primary">
-                      {log.action}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-medium text-xs hidden lg:table-cell">
-                    {log.details ?? "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable
+        columns={columns}
+        data={logs}
+        keyField="id"
+        emptyMessage="No activity logs found."
+        searchable
+        searchPlaceholder="Search logs..."
+        searchFn={(log, q) => log.user.fullname.toLowerCase().includes(q) || log.user.username.toLowerCase().includes(q) || log.action.toLowerCase().includes(q) || (log.details ?? "").toLowerCase().includes(q)}
+        selectable
+        selectedKeys={selectedKeys}
+        onSelectionChange={setSelectedKeys}
+        defaultPageSize={25}
+      />
     </RequirePermission>
   );
 }

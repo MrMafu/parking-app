@@ -24,6 +24,7 @@ export default function UsersPage() {
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<PublicUser | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(new Set());
 
   const fetchData = useCallback(async () => {
     const [usersRes, rolesRes] = await Promise.all([
@@ -107,16 +108,29 @@ export default function UsersPage() {
     fetchData();
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedKeys.size === 0) return;
+    setDeleting(true);
+    await Promise.all(
+      Array.from(selectedKeys).map((id) =>
+        apiFetch(`/users/${id}`, { method: "DELETE" })
+      )
+    );
+    setDeleting(false);
+    setSelectedKeys(new Set());
+    fetchData();
+  };
+
   if (loading) return <p className="text-medium text-sm">Loading...</p>;
 
   const columns = [
-    { key: "fullname", label: "Name", render: (u: PublicUser) => <span className="font-medium text-dark">{u.fullname}</span> },
-    { key: "username", label: "Username", render: (u: PublicUser) => <span className="text-medium">{u.username}</span> },
-    { key: "email", label: "Email", className: "hidden md:table-cell", render: (u: PublicUser) => <span className="text-medium">{u.email}</span> },
-    { key: "role", label: "Role", render: (u: PublicUser) => (
+    { key: "fullname", label: "Name", sortable: true, sortValue: (u: PublicUser) => u.fullname, render: (u: PublicUser) => <span className="font-medium text-dark">{u.fullname}</span> },
+    { key: "username", label: "Username", sortable: true, sortValue: (u: PublicUser) => u.username, render: (u: PublicUser) => <span className="text-medium">{u.username}</span> },
+    { key: "email", label: "Email", sortable: true, sortValue: (u: PublicUser) => u.email, className: "hidden md:table-cell", render: (u: PublicUser) => <span className="text-medium">{u.email}</span> },
+    { key: "role", label: "Role", sortable: true, sortValue: (u: PublicUser) => u.role.name, render: (u: PublicUser) => (
       <span className="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium bg-secondary/10 text-secondary">{u.role.name}</span>
     )},
-    { key: "status", label: "Status", render: (u: PublicUser) => (
+    { key: "status", label: "Status", sortable: true, sortValue: (u: PublicUser) => u.isActive ? "Active" : "Inactive", render: (u: PublicUser) => (
       <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${u.isActive ? "bg-success text-white" : "bg-medium text-white"}`}>
         {u.isActive ? "Active" : "Inactive"}
       </span>
@@ -142,7 +156,23 @@ export default function UsersPage() {
         }
       />
 
-      <DataTable columns={columns} data={users} keyField="id" emptyMessage="No users found." />
+      <DataTable
+        columns={columns}
+        data={users}
+        keyField="id"
+        emptyMessage="No users found."
+        searchable
+        searchPlaceholder="Search users..."
+        searchFn={(u, q) => u.fullname.toLowerCase().includes(q) || u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.name.toLowerCase().includes(q)}
+        selectable
+        selectedKeys={selectedKeys}
+        onSelectionChange={setSelectedKeys}
+        toolbar={
+          <button onClick={handleBulkDelete} disabled={deleting} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-danger text-white hover:bg-danger-shade transition disabled:opacity-60">
+            Deactivate Selected
+          </button>
+        }
+      />
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit User" : "Add User"}>
         <form onSubmit={handleSubmit} className="space-y-4">

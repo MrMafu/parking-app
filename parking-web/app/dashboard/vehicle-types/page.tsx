@@ -21,6 +21,7 @@ export default function VehicleTypesPage() {
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<VehicleType | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(new Set());
 
   const fetchData = useCallback(async () => {
     const res = await apiFetch("/vehicle-types");
@@ -83,11 +84,24 @@ export default function VehicleTypesPage() {
     fetchData();
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedKeys.size === 0) return;
+    setDeleting(true);
+    await Promise.all(
+      Array.from(selectedKeys).map((id) =>
+        apiFetch(`/vehicle-types/${id}`, { method: "DELETE" })
+      )
+    );
+    setDeleting(false);
+    setSelectedKeys(new Set());
+    fetchData();
+  };
+
   if (loading) return <p className="text-medium text-sm">Loading...</p>;
 
   const columns = [
-    { key: "name", label: "Name", render: (t: VehicleType) => <span className="font-medium text-dark">{t.name}</span> },
-    { key: "description", label: "Description", render: (t: VehicleType) => <span className="text-medium">{t.description ?? "—"}</span> },
+    { key: "name", label: "Name", sortable: true, sortValue: (t: VehicleType) => t.name, render: (t: VehicleType) => <span className="font-medium text-dark">{t.name}</span> },
+    { key: "description", label: "Description", sortable: true, sortValue: (t: VehicleType) => t.description ?? "", render: (t: VehicleType) => <span className="text-medium">{t.description ?? "—"}</span> },
     {
       key: "actions", label: "", render: (t: VehicleType) => (
         <div className="flex gap-2 justify-end">
@@ -109,7 +123,23 @@ export default function VehicleTypesPage() {
         }
       />
 
-      <DataTable columns={columns} data={types} keyField="id" emptyMessage="No vehicle types found." />
+      <DataTable
+        columns={columns}
+        data={types}
+        keyField="id"
+        emptyMessage="No vehicle types found."
+        searchable
+        searchPlaceholder="Search vehicle types..."
+        searchFn={(t, q) => t.name.toLowerCase().includes(q) || (t.description ?? "").toLowerCase().includes(q)}
+        selectable
+        selectedKeys={selectedKeys}
+        onSelectionChange={setSelectedKeys}
+        toolbar={
+          <button onClick={handleBulkDelete} disabled={deleting} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-danger text-white hover:bg-danger-shade transition disabled:opacity-60">
+            Delete Selected
+          </button>
+        }
+      />
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Vehicle Type" : "Add Vehicle Type"}>
         <form onSubmit={handleSubmit} className="space-y-4">

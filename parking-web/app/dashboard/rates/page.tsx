@@ -32,6 +32,7 @@ export default function RatesPage() {
   const [error, setError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Rate | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(new Set());
 
   const fetchData = useCallback(async () => {
     const [rRes, vtRes] = await Promise.all([
@@ -117,17 +118,30 @@ export default function RatesPage() {
     fetchData();
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedKeys.size === 0) return;
+    setDeleting(true);
+    await Promise.all(
+      Array.from(selectedKeys).map((id) =>
+        apiFetch(`/rates/${id}`, { method: "DELETE" })
+      )
+    );
+    setDeleting(false);
+    setSelectedKeys(new Set());
+    fetchData();
+  };
+
   if (loading) return <p className="text-medium text-sm">Loading...</p>;
 
   const columns = [
-    { key: "name", label: "Name", render: (r: Rate) => <span className="font-medium text-dark">{r.name}</span> },
-    { key: "type", label: "Vehicle Type", className: "hidden md:table-cell", render: (r: Rate) => <span className="text-medium">{r.vehicleType?.name ?? "—"}</span> },
+    { key: "name", label: "Name", sortable: true, sortValue: (r: Rate) => r.name, render: (r: Rate) => <span className="font-medium text-dark">{r.name}</span> },
+    { key: "type", label: "Vehicle Type", sortable: true, sortValue: (r: Rate) => r.vehicleType?.name ?? "", className: "hidden md:table-cell", render: (r: Rate) => <span className="text-medium">{r.vehicleType?.name ?? "—"}</span> },
     {
-      key: "rateType", label: "Rate Type", render: (r: Rate) => (
+      key: "rateType", label: "Rate Type", sortable: true, sortValue: (r: Rate) => r.rateType, render: (r: Rate) => (
         <span className="inline-block rounded-full px-2.5 py-0.5 text-xs font-medium bg-tertiary/10 text-tertiary">{r.rateType}</span>
       )
     },
-    { key: "price", label: "Price", render: (r: Rate) => <span className="text-dark font-medium">{formatCurrency(r.priceCents)}</span> },
+    { key: "price", label: "Price", sortable: true, sortValue: (r: Rate) => r.priceCents, render: (r: Rate) => <span className="text-dark font-medium">{formatCurrency(r.priceCents)}</span> },
     { key: "validity", label: "Validity", className: "hidden lg:table-cell", render: (r: Rate) => <span className="text-medium text-xs">{formatDate(r.validFrom)} — {formatDate(r.validTo)}</span> },
     {
       key: "actions", label: "", render: (r: Rate) => (
@@ -150,7 +164,23 @@ export default function RatesPage() {
         }
       />
 
-      <DataTable columns={columns} data={rates} keyField="id" emptyMessage="No rates found." />
+      <DataTable
+        columns={columns}
+        data={rates}
+        keyField="id"
+        emptyMessage="No rates found."
+        searchable
+        searchPlaceholder="Search rates..."
+        searchFn={(r, q) => r.name.toLowerCase().includes(q) || r.rateType.toLowerCase().includes(q) || (r.vehicleType?.name ?? "").toLowerCase().includes(q)}
+        selectable
+        selectedKeys={selectedKeys}
+        onSelectionChange={setSelectedKeys}
+        toolbar={
+          <button onClick={handleBulkDelete} disabled={deleting} className="px-3 py-1.5 text-xs font-medium rounded-lg bg-danger text-white hover:bg-danger-shade transition disabled:opacity-60">
+            Delete Selected
+          </button>
+        }
+      />
 
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={editing ? "Edit Rate" : "Add Rate"}>
         <form onSubmit={handleSubmit} className="space-y-4">
