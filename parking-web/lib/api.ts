@@ -14,7 +14,7 @@ export async function apiFetch(path: string, init?: RequestInit) {
     },
   });
 
-  if (res.status === 401) {
+  if (res.status === 401 && !path.startsWith("/auth/login")) {
     // session expired mid-use
     window.location.replace("/login");
   }
