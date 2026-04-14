@@ -7,6 +7,10 @@ import rates from "./rates";
 import parkingAreas from "./parking-areas";
 import activityLogs from "./activity-logs";
 import roles from "./roles";
+import transactions from "./transactions";
+import payments from "./payments";
+import receipts from "./receipts";
+import refunds from "./refunds";
 
 const router = new Hono();
 
@@ -18,5 +22,9 @@ router.route("/rates", rates);
 router.route("/parking-areas", parkingAreas);
 router.route("/activity-logs", activityLogs);
 router.route("/roles", roles);
+router.route("/transactions", transactions);
+router.route("/payments", payments);
+router.route("/receipts", receipts);
+router.route("/refunds", refunds);
 
 export default router;
