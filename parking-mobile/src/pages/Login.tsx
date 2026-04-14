@@ -35,7 +35,7 @@ export default function LoginPage() {
 
   return (
     <IonPage>
-      <IonHeader>
+      <IonHeader className="ion-no-border">
         <IonToolbar>
           <IonTitle>Parking Login</IonTitle>
         </IonToolbar>

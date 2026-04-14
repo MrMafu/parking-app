@@ -2,11 +2,14 @@ import { Redirect, Route } from "react-router-dom";
 import {
   IonApp,
   IonRouterOutlet,
+  setupIonicReact,
 } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import LoginPage from "./pages/Login";
 import HomePage from "./pages/Home";
 import { useAuth } from "./context/AuthContext";
+
+setupIonicReact();
 
 import "@ionic/react/css/core.css";
 import "@ionic/react/css/normalize.css";
