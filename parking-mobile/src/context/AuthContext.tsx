@@ -10,6 +10,7 @@ type PublicUser = {
     id: number;
     name: string;
   };
+  permissions: string[];
 };
 
 type AuthContextValue = {
