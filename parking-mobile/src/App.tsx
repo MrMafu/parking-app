@@ -23,6 +23,7 @@ import EntryPage from "./pages/Entry";
 import ExitPage from "./pages/Exit";
 import TransactionsPage from "./pages/Transactions";
 import AccountPage from "./pages/Account";
+import RfidTestPage from "./pages/RfidTest";
 import { useAuth } from "./context/AuthContext";
 
 setupIonicReact({ mode: "ios" });
@@ -46,6 +47,7 @@ function AppTabs() {
         <Route exact path="/home" component={HomePage} />
         <Route exact path="/entry" component={EntryPage} />
         <Route exact path="/exit" component={ExitPage} />
+        <Route exact path="/rfid-test" component={RfidTestPage} />
         <Route exact path="/transactions" component={TransactionsPage} />
         <Route exact path="/account" component={AccountPage} />
         <Route exact path="/" render={() => <Redirect to="/home" />} />
