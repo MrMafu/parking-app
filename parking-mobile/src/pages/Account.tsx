@@ -20,9 +20,16 @@ import {
   logOutOutline,
 } from "ionicons/icons";
 import { useAuth } from "../context/AuthContext";
+import { useHistory } from "react-router-dom";
 
 export default function AccountPage() {
   const { user, logout } = useAuth();
+  const history = useHistory();
+
+  const handleLogout = async () => {
+    await logout();
+    history.replace("/login");
+  };
 
   return (
     <IonPage>
@@ -70,7 +77,7 @@ export default function AccountPage() {
         <IonButton
           expand="block"
           color="danger"
-          onClick={() => logout()}
+          onClick={handleLogout}
           className="ion-margin-top"
         >
           <IonIcon icon={logOutOutline} slot="start" />

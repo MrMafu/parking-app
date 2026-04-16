@@ -183,8 +183,9 @@ model Transaction {
   id              Int               @id @default(autoincrement())
   attendantId     Int?              @map("attendant_id")
   attendant       User?             @relation("TransactionsAttendedBy", fields: [attendantId], references: [id], onDelete: SetNull)
-  vehicleId       Int               @map("vehicle_id")
-  vehicle         Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  vehicleId       Int?              @map("vehicle_id")
+  vehicle         Vehicle?          @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  tagId           String?           @map("tag_id")
   areaId          Int               @map("area_id")
   parkingArea     ParkingArea       @relation(fields: [areaId], references: [id], onDelete: Restrict)
   rateId          Int?              @map("rate_id")
@@ -205,6 +206,7 @@ model Transaction {
   @@index([areaId])
   @@index([attendantId])
   @@index([rateId])
+  @@index([tagId])
   @@map("transactions")
 }
 

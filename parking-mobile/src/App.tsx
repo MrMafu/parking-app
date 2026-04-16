@@ -24,6 +24,8 @@ import ExitPage from "./pages/Exit";
 import TransactionsPage from "./pages/Transactions";
 import AccountPage from "./pages/Account";
 import RfidTestPage from "./pages/RfidTest";
+import RfidEntryPage from "./pages/RfidEntry";
+import RfidExitPage from "./pages/RfidExit";
 import { useAuth } from "./context/AuthContext";
 
 setupIonicReact({ mode: "ios" });
@@ -47,7 +49,6 @@ function AppTabs() {
         <Route exact path="/home" component={HomePage} />
         <Route exact path="/entry" component={EntryPage} />
         <Route exact path="/exit" component={ExitPage} />
-        <Route exact path="/rfid-test" component={RfidTestPage} />
         <Route exact path="/transactions" component={TransactionsPage} />
         <Route exact path="/account" component={AccountPage} />
         <Route exact path="/" render={() => <Redirect to="/home" />} />
@@ -79,6 +80,8 @@ function AppTabs() {
   );
 }
 
+const PUBLIC_RFID_PATHS = ["/rfid-test", "/rfid-entry", "/rfid-exit"];
+
 function AppRoutes() {
   const { user, loading } = useAuth();
 
@@ -86,16 +89,35 @@ function AppRoutes() {
     return null;
   }
 
-  if (!user) {
-    return (
-      <IonRouterOutlet>
-        <Route exact path="/login" component={LoginPage} />
-        <Route render={() => <Redirect to="/login" />} />
-      </IonRouterOutlet>
-    );
-  }
+  return (
+    <IonRouterOutlet>
+      {/* Public RFID pages — no auth required */}
+      <Route exact path="/rfid-test" component={RfidTestPage} />
+      <Route exact path="/rfid-entry" component={RfidEntryPage} />
+      <Route exact path="/rfid-exit" component={RfidExitPage} />
 
-  return <AppTabs />;
+      {!user ? (
+        <>
+          <Route exact path="/login" component={LoginPage} />
+          <Route
+            render={({ location }) =>
+              PUBLIC_RFID_PATHS.includes(location.pathname) ? null : (
+                <Redirect to="/login" />
+              )
+            }
+          />
+        </>
+      ) : (
+        <>
+          <Route exact path="/login" render={() => <Redirect to="/home" />} />
+          <Route render={({ location }) => {
+            if (PUBLIC_RFID_PATHS.includes(location.pathname)) return null;
+            return <AppTabs />;
+          }} />
+        </>
+      )}
+    </IonRouterOutlet>
+  );
 }
 
 export default function App() {

@@ -11,7 +11,8 @@ export type TransactionDetail = {
     color: string;
     ownerName: string;
     vehicleType: { id: number; name: string };
-  };
+  } | null;
+  tagId: string | null;
   parkingArea: { id: number; name: string };
   rate: { id: number; name: string; rateType: string; priceCents: number } | null;
   rateSnapshot: unknown;
@@ -32,6 +33,7 @@ export type TransactionDetail = {
 
 const transactionSelect = {
   id: true,
+  tagId: true,
   entryTime: true,
   exitTime: true,
   durationMinutes: true,
@@ -84,6 +86,22 @@ export async function getTransactionById(
   return prisma.transaction.findUnique({
     where: { id },
     select: transactionSelect,
+  });
+}
+
+/**
+ * Find an open or awaiting-payment transaction by RFID tag ID.
+ */
+export async function getTransactionByTagId(
+  tagId: string
+): Promise<TransactionDetail | null> {
+  return prisma.transaction.findFirst({
+    where: {
+      tagId,
+      status: { in: ["Open", "AwaitingPayment"] },
+    },
+    select: transactionSelect,
+    orderBy: { id: "desc" },
   });
 }
 
@@ -241,5 +259,113 @@ export async function cancelTransaction(id: number): Promise<TransactionDetail> 
     where: { id },
     data: { status: "Cancelled" },
     select: transactionSelect,
+  });
+}
+
+/**
+ * Create a new RFID-based transaction (tag entry).
+ * No vehicle registration needed — just tag ID and parking area.
+ * Rate is not assigned at entry; it will be assigned at exit when vehicle type is selected.
+ */
+export async function rfidEntry(data: {
+  tagId: string;
+  areaId: number;
+  attendantId?: number;
+}): Promise<TransactionDetail> {
+  return prisma.$transaction(async (tx): Promise<TransactionDetail> => {
+    // Check for existing open transaction for this tag
+    const existing = await tx.transaction.findFirst({
+      where: { tagId: data.tagId, status: "Open" },
+    });
+    if (existing) {
+      throw new Error("Tag already has an open transaction");
+    }
+
+    // Check parking area exists, is open, and has capacity
+    const area = await tx.parkingArea.findUnique({
+      where: { id: data.areaId },
+    });
+    if (!area) throw new Error("Parking area not found");
+    if (area.status !== "Open") throw new Error("Parking area is not open");
+
+    const occupied = await tx.transaction.count({
+      where: { areaId: data.areaId, status: "Open" },
+    });
+    if (occupied >= area.capacity) {
+      throw new Error("Parking area is full");
+    }
+
+    const now = new Date();
+
+    return tx.transaction.create({
+      data: {
+        tagId: data.tagId,
+        areaId: data.areaId,
+        attendantId: data.attendantId ?? null,
+        entryTime: now,
+        status: "Open",
+      },
+      select: transactionSelect,
+    });
+  });
+}
+
+/**
+ * RFID exit — scan tag, assign vehicle type, look up rate, calculate charges.
+ * Moves transaction from Open to AwaitingPayment.
+ */
+export async function rfidExit(data: {
+  tagId: string;
+  vehicleTypeId: number;
+}): Promise<TransactionDetail> {
+  return prisma.$transaction(async (tx): Promise<TransactionDetail> => {
+    const txn = await tx.transaction.findFirst({
+      where: { tagId: data.tagId, status: "Open" },
+      select: { id: true, status: true, entryTime: true },
+    });
+    if (!txn) throw new Error("No open transaction found for this tag");
+
+    const now = new Date();
+    const durationMinutes = Math.round(
+      (now.getTime() - txn.entryTime.getTime()) / 60000
+    );
+
+    // Find applicable rate for the selected vehicle type
+    const rate = await tx.rate.findFirst({
+      where: {
+        vehicleTypeId: data.vehicleTypeId,
+        validFrom: { lte: now },
+        validTo: { gte: now },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const rateSnapshot = rate
+      ? {
+          id: rate.id,
+          name: rate.name,
+          rateType: rate.rateType,
+          priceCents: rate.priceCents,
+          graceMinutes: rate.graceMinutes,
+        }
+      : null;
+
+    const amountCents = calculateAmount(
+      rateSnapshot,
+      durationMinutes
+    );
+
+    return tx.transaction.update({
+      where: { id: txn.id },
+      data: {
+        exitTime: now,
+        durationMinutes,
+        amountCents,
+        rateId: rate?.id ?? null,
+        rateSnapshot: rateSnapshot ?? Prisma.DbNull,
+        status: "AwaitingPayment",
+      },
+      select: transactionSelect,
+    });
   });
 }

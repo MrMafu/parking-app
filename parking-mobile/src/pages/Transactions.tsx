@@ -26,8 +26,8 @@ type Transaction = {
     color: string;
     ownerName: string;
     vehicleType: { id: number; name: string };
-  };
-  parkingArea: { id: number; name: string };
+  } | null;
+  parkingArea: { id: number; name: string } | null;
   entryTime: string;
   exitTime: string | null;
   durationMinutes: number | null;
@@ -143,9 +143,9 @@ export default function TransactionsPage() {
                   }
                 >
                   <IonLabel>
-                    <h2>{txn.vehicle.licensePlate}</h2>
+                    <h2>{txn.vehicle?.licensePlate ?? "N/A"}</h2>
                     <p>
-                      {txn.parkingArea.name} • {formatDate(txn.entryTime)}
+                      {txn.parkingArea?.name ?? "N/A"} • {formatDate(txn.entryTime)}
                     </p>
                   </IonLabel>
                   <IonBadge slot="end" color={statusColor(txn.status)}>
@@ -162,11 +162,11 @@ export default function TransactionsPage() {
                   >
                     <IonText color="medium">
                       <p style={{ margin: "4px 0" }}>
-                        <strong>Type:</strong> {txn.vehicle.vehicleType.name} •{" "}
-                        <strong>Color:</strong> {txn.vehicle.color}
+                        <strong>Type:</strong> {txn.vehicle?.vehicleType?.name ?? "N/A"} •{" "}
+                        <strong>Color:</strong> {txn.vehicle?.color ?? "N/A"}
                       </p>
                       <p style={{ margin: "4px 0" }}>
-                        <strong>Owner:</strong> {txn.vehicle.ownerName}
+                        <strong>Owner:</strong> {txn.vehicle?.ownerName ?? "N/A"}
                       </p>
                       <p style={{ margin: "4px 0" }}>
                         <strong>Entry:</strong> {formatDate(txn.entryTime)}
