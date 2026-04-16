@@ -29,11 +29,13 @@ export function useRfidReader(options: UseRfidReaderOptions = {}) {
   const bufferRef = useRef("");
   const lastKeystrokeRef = useRef(0);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAcceptedTagRef = useRef<string | null>(null);
 
   const reset = useCallback(() => {
     setState({ tagId: null, isReading: false, scanCount: 0, lastScanTime: null });
     bufferRef.current = "";
     lastKeystrokeRef.current = 0;
+    lastAcceptedTagRef.current = null;
   }, []);
 
   const clearBuffer = useCallback(() => {
@@ -54,9 +56,18 @@ export function useRfidReader(options: UseRfidReaderOptions = {}) {
 
         const tag = bufferRef.current.trim();
         if (tag.length >= minTagLength) {
+          // Skip if this is the same tag as last accepted (held or re-swiped)
+          if (tag === lastAcceptedTagRef.current) {
+            bufferRef.current = "";
+            lastKeystrokeRef.current = 0;
+            return;
+          }
+
           // Prevent the Enter from triggering form submissions etc.
           e.preventDefault();
           e.stopPropagation();
+
+          lastAcceptedTagRef.current = tag;
 
           setState((prev) => ({
             tagId: tag,
