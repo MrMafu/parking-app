@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   IonButton,
   IonCard,
@@ -89,6 +89,13 @@ export default function RfidExitPage() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
 
+  // QRIS payment state
+  const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
+  const [paymentId, setPaymentId] = useState<number | null>(null);
+  const [qrExpiry, setQrExpiry] = useState<number>(0); // seconds remaining
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Fetch vehicle types on mount
   useEffect(() => {
     (async () => {
@@ -140,6 +147,70 @@ export default function RfidExitPage() {
       ? Math.round((Date.now() - new Date(txn.entryTime).getTime()) / 60000)
       : null;
 
+  // Cleanup polling and timer on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  const stopPolling = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const startPolling = (pId: number) => {
+    // Poll payment status every 3 seconds
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await apiFetch(`/payments/${pId}/status`);
+        const json = await res.json();
+        if (res.ok) {
+          const { paymentStatus } = json.data;
+          if (paymentStatus === "Completed") {
+            stopPolling();
+            setQrImageUrl(null);
+            // Refresh transaction to get updated state
+            const tRes = await apiFetch(`/transactions/${txn?.id}`);
+            if (tRes.ok) {
+              const tJson = await tRes.json();
+              setTxn(tJson.data);
+            }
+          } else if (paymentStatus === "Failed") {
+            stopPolling();
+            setQrImageUrl(null);
+            setPaymentId(null);
+            setError("Payment expired or failed. Please try again.");
+          }
+        }
+      } catch {
+        // Ignore polling errors
+      }
+    }, 3000);
+
+    // Countdown timer (5 minutes = 300 seconds)
+    setQrExpiry(300);
+    timerRef.current = setInterval(() => {
+      setQrExpiry((prev) => {
+        if (prev <= 1) {
+          stopPolling();
+          setQrImageUrl(null);
+          setPaymentId(null);
+          setError("QR code expired. Please create a new payment.");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
   const handleExit = async () => {
     if (!tagId || !selectedTypeId) return;
     setProcessing(true);
@@ -169,7 +240,7 @@ export default function RfidExitPage() {
     setError("");
 
     try {
-      // Create payment
+      // Create payment — backend creates Midtrans QRIS charge
       const pRes = await apiFetch("/payments", {
         method: "POST",
         body: JSON.stringify({
@@ -184,26 +255,41 @@ export default function RfidExitPage() {
         return;
       }
 
-      // Complete payment
-      const cRes = await apiFetch(`/payments/${pJson.data.id}/complete`, {
-        method: "POST",
-        body: JSON.stringify({}),
-      });
-      const cJson = await cRes.json();
-      if (!cRes.ok) {
-        setError(cJson.message || "Failed to complete payment");
-        setProcessing(false);
-        return;
-      }
-
-      // Refresh transaction
-      const tRes = await apiFetch(`/transactions/${txn.id}`);
-      if (tRes.ok) {
-        const tJson = await tRes.json();
-        setTxn(tJson.data);
-      }
+      // Show QR code and start polling
+      setPaymentId(pJson.data.id);
+      setQrImageUrl(pJson.qrImageUrl || "SIMULATE");
+      startPolling(pJson.data.id);
     } catch {
       setError("Payment failed");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleSimulatePayment = async () => {
+    if (!paymentId) return;
+    setProcessing(true);
+    setError("");
+
+    try {
+      const res = await apiFetch(`/payments/${paymentId}/simulate`, {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (res.ok) {
+        stopPolling();
+        setQrImageUrl(null);
+        // Refresh transaction
+        const tRes = await apiFetch(`/transactions/${txn?.id}`);
+        if (tRes.ok) {
+          const tJson = await tRes.json();
+          setTxn(tJson.data);
+        }
+      } else {
+        setError(json.message || "Simulation failed");
+      }
+    } catch {
+      setError("Simulation failed");
     } finally {
       setProcessing(false);
     }
@@ -236,10 +322,14 @@ export default function RfidExitPage() {
   };
 
   const handleReset = () => {
+    stopPolling();
     resetReader();
     setTxn(null);
     setReceipt(null);
     setSelectedTypeId(undefined);
+    setQrImageUrl(null);
+    setPaymentId(null);
+    setQrExpiry(0);
     setError("");
   };
 
@@ -456,21 +546,118 @@ export default function RfidExitPage() {
                 )}
               </IonList>
 
-              {(!txn.payment || txn.payment.status !== "Completed") && (
-                <IonButton
-                  expand="block"
-                  color="success"
-                  onClick={handlePayment}
-                  disabled={processing}
-                  className="ion-margin-top"
+              {/* QR Code Display */}
+              {qrImageUrl && (
+                <div
+                  style={{
+                    textAlign: "center",
+                    margin: "16px 0",
+                    padding: 16,
+                    background: "#fff",
+                    borderRadius: 12,
+                    border: "2px solid var(--ion-color-primary)",
+                  }}
                 >
-                  {processing ? (
-                    <IonSpinner name="crescent" />
+                  <p style={{ fontWeight: 600, marginBottom: 8, color: "#333" }}>
+                    {qrImageUrl === "SIMULATE"
+                      ? "Simulated QRIS Payment"
+                      : "Scan QR Code to Pay"}
+                  </p>
+                  {qrImageUrl !== "SIMULATE" ? (
+                    <img
+                      src={qrImageUrl}
+                      alt="QRIS Payment QR Code"
+                      style={{
+                        width: 220,
+                        height: 220,
+                        objectFit: "contain",
+                      }}
+                    />
                   ) : (
-                    "Process Payment (QRIS)"
+                    <div
+                      style={{
+                        width: 220,
+                        height: 220,
+                        margin: "0 auto",
+                        background: "#f0f0f0",
+                        borderRadius: 12,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        border: "2px dashed var(--ion-color-medium)",
+                      }}
+                    >
+                      <div style={{ textAlign: "center" }}>
+                        <p style={{ fontSize: 48, margin: 0 }}>📱</p>
+                        <p style={{ fontSize: 12, color: "#666", margin: "4px 0 0" }}>
+                          QR Simulation Mode
+                        </p>
+                      </div>
+                    </div>
                   )}
-                </IonButton>
+                  <p
+                    style={{
+                      marginTop: 12,
+                      fontSize: 14,
+                      color:
+                        qrExpiry <= 60
+                          ? "var(--ion-color-danger)"
+                          : "var(--ion-color-medium)",
+                      fontWeight: qrExpiry <= 60 ? 700 : 400,
+                    }}
+                  >
+                    Expires in {Math.floor(qrExpiry / 60)}:
+                    {String(qrExpiry % 60).padStart(2, "0")}
+                  </p>
+
+                  {/* Simulate payment button */}
+                  <IonButton
+                    expand="block"
+                    color="tertiary"
+                    onClick={handleSimulatePayment}
+                    disabled={processing}
+                    style={{ marginTop: 12 }}
+                  >
+                    {processing ? (
+                      <IonSpinner name="crescent" />
+                    ) : (
+                      "Simulate Successful Payment"
+                    )}
+                  </IonButton>
+
+                  <IonSpinner
+                    name="dots"
+                    style={{ marginTop: 8 }}
+                  />
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: "var(--ion-color-medium)",
+                      marginTop: 4,
+                    }}
+                  >
+                    Waiting for payment confirmation...
+                  </p>
+                </div>
               )}
+
+              {/* Show payment button only if QR not yet displayed */}
+              {!qrImageUrl &&
+                (!txn.payment || txn.payment.status !== "Completed") && (
+                  <IonButton
+                    expand="block"
+                    color="success"
+                    onClick={handlePayment}
+                    disabled={processing}
+                    className="ion-margin-top"
+                  >
+                    {processing ? (
+                      <IonSpinner name="crescent" />
+                    ) : (
+                      "Generate QRIS Payment"
+                    )}
+                  </IonButton>
+                )}
 
               {txn.payment?.status === "Completed" && (
                 <IonButton
@@ -486,6 +673,70 @@ export default function RfidExitPage() {
                   )}
                 </IonButton>
               )}
+            </IonCardContent>
+          </IonCard>
+        )}
+
+        {/* Payment completed — show receipt option */}
+        {txn && txn.status === "Closed" && txn.payment?.status === "Completed" && !receipt && (
+          <IonCard>
+            <IonCardHeader>
+              <IonCardTitle style={{ fontSize: 16 }}>
+                Transaction #{txn.id} — Paid
+              </IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonList lines="none">
+                <IonItem>
+                  <IonLabel>
+                    <p>Area</p>
+                    <h3>{txn.parkingArea.name}</h3>
+                  </IonLabel>
+                </IonItem>
+                {txn.exitTime && (
+                  <IonItem>
+                    <IonLabel>
+                      <p>Exit</p>
+                      <h3>{formatDate(txn.exitTime)}</h3>
+                    </IonLabel>
+                  </IonItem>
+                )}
+                {txn.durationMinutes != null && (
+                  <IonItem>
+                    <IonLabel>
+                      <p>Duration</p>
+                      <h3>{formatDuration(txn.durationMinutes)}</h3>
+                    </IonLabel>
+                  </IonItem>
+                )}
+                {txn.amountCents != null && (
+                  <IonItem>
+                    <IonLabel>
+                      <p>Total Paid</p>
+                      <h2 style={{ color: "var(--ion-color-success)" }}>
+                        {formatCents(txn.amountCents)}
+                      </h2>
+                    </IonLabel>
+                  </IonItem>
+                )}
+              </IonList>
+
+              <IonBadge color="success" style={{ marginBottom: 12 }}>
+                Payment Successful
+              </IonBadge>
+
+              <IonButton
+                expand="block"
+                onClick={handleReceipt}
+                disabled={processing}
+                className="ion-margin-top"
+              >
+                {processing ? (
+                  <IonSpinner name="crescent" />
+                ) : (
+                  "Generate Receipt"
+                )}
+              </IonButton>
             </IonCardContent>
           </IonCard>
         )}

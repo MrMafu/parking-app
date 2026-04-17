@@ -11,6 +11,9 @@ import {
   createPayment,
   completePayment,
   failPayment,
+  handleMidtransNotification,
+  checkPaymentStatus,
+  simulatePaymentSuccess,
 } from "../services/payment-service";
 import { logActivity } from "../lib/activity-log";
 import type { AuthEnv } from "../types/auth";
@@ -28,22 +31,6 @@ payments.get(
   }
 );
 
-// GET /payments/:id
-payments.get(
-  "/:id",
-  requireAuth,
-  requirePermission("payments.view"),
-  async (c) => {
-    const id = Number(c.req.param("id"));
-    if (isNaN(id)) return c.json({ message: "Invalid ID" }, 400);
-
-    const payment = await getPaymentById(id);
-    if (!payment) return c.json({ message: "Payment not found" }, 404);
-
-    return c.json({ message: "Payment retrieved", data: payment });
-  }
-);
-
 // GET /payments/by-transaction/:transactionId
 payments.get(
   "/by-transaction/:transactionId",
@@ -55,6 +42,66 @@ payments.get(
       return c.json({ message: "Invalid transaction ID" }, 400);
 
     const payment = await getPaymentByTransactionId(transactionId);
+    if (!payment) return c.json({ message: "Payment not found" }, 404);
+
+    return c.json({ message: "Payment retrieved", data: payment });
+  }
+);
+
+// POST /payments/notification — Midtrans webhook (no auth)
+payments.post("/notification", async (c) => {
+  try {
+    const body = await c.req.json();
+    await handleMidtransNotification(body);
+    return c.json({ message: "OK" });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "";
+    if (msg.includes("Invalid signature")) {
+      return c.json({ message: "Invalid signature" }, 403);
+    }
+    console.error("Midtrans notification error:", error);
+    return c.json({ message: "OK" }); // Always return 200 to Midtrans
+  }
+});
+
+// POST /payments/:id/simulate — simulate successful payment (dev only)
+payments.post(
+  "/:id/simulate",
+  requireAuth,
+  requirePermission("payments.manage"),
+  async (c) => {
+    const id = Number(c.req.param("id"));
+    if (isNaN(id)) return c.json({ message: "Invalid ID" }, 400);
+
+    try {
+      const payment = await simulatePaymentSuccess(id);
+      return c.json({ message: "Payment simulated as completed", data: payment });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "";
+      if (msg.includes("not enabled")) {
+        return c.json({ message: "Simulation mode is not enabled" }, 403);
+      }
+      if (msg.includes("not found")) {
+        return c.json({ message: msg }, 404);
+      }
+      if (msg.includes("not pending")) {
+        return c.json({ message: msg }, 400);
+      }
+      throw error;
+    }
+  }
+);
+
+// GET /payments/:id
+payments.get(
+  "/:id",
+  requireAuth,
+  requirePermission("payments.view"),
+  async (c) => {
+    const id = Number(c.req.param("id"));
+    if (isNaN(id)) return c.json({ message: "Invalid ID" }, 400);
+
+    const payment = await getPaymentById(id);
     if (!payment) return c.json({ message: "Payment not found" }, 404);
 
     return c.json({ message: "Payment retrieved", data: payment });
@@ -79,13 +126,20 @@ payments.post(
 
     try {
       const authUser = c.get("authUser");
-      const payment = await createPayment(parsed.data);
+      const result = await createPayment(parsed.data);
       await logActivity(
         Number(authUser.userId),
         "payments.create",
-        `Created payment #${payment.id} for transaction #${parsed.data.transactionId}`
+        `Created payment #${result.payment.id} for transaction #${parsed.data.transactionId}`
       );
-      return c.json({ message: "Payment created", data: payment }, 201);
+      return c.json(
+        {
+          message: "Payment created",
+          data: result.payment,
+          qrImageUrl: result.qrImageUrl,
+        },
+        201
+      );
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "";
       if (msg.includes("not found")) {
@@ -164,6 +218,28 @@ payments.post(
       }
       if (msg.includes("not pending")) {
         return c.json({ message: msg }, 400);
+      }
+      throw error;
+    }
+  }
+);
+
+// GET /payments/:id/status — poll Midtrans status
+payments.get(
+  "/:id/status",
+  requireAuth,
+  requirePermission("payments.view"),
+  async (c) => {
+    const id = Number(c.req.param("id"));
+    if (isNaN(id)) return c.json({ message: "Invalid ID" }, 400);
+
+    try {
+      const result = await checkPaymentStatus(id);
+      return c.json({ message: "Payment status", data: result });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "";
+      if (msg.includes("not found")) {
+        return c.json({ message: msg }, 404);
       }
       throw error;
     }
