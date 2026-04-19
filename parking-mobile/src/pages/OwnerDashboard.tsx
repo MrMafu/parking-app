@@ -42,7 +42,7 @@ type RecentTransaction = {
 };
 
 function formatCents(cents: number): string {
-  return `Rp ${(cents / 100).toLocaleString("id-ID")}`;
+  return `Rp ${cents.toLocaleString("id-ID")}`;
 }
 
 function formatDate(iso: string): string {
