@@ -23,16 +23,6 @@ export type VehicleType = {
   description: string | null;
 };
 
-export type Vehicle = {
-  id: number;
-  licensePlate: string;
-  vehicleTypeId: number;
-  vehicleType: VehicleType;
-  color: string;
-  ownerName: string;
-  registeredById: number;
-};
-
 export type Rate = {
   id: number;
   name: string;

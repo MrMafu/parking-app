@@ -12,15 +12,12 @@ import {
 import { IonReactRouter } from "@ionic/react-router";
 import {
   homeOutline,
-  logInOutline,
-  logOutOutline,
   listOutline,
   personOutline,
+  scanOutline,
 } from "ionicons/icons";
 import LoginPage from "./pages/Login";
 import HomePage from "./pages/Home";
-import EntryPage from "./pages/Entry";
-import ExitPage from "./pages/Exit";
 import TransactionsPage from "./pages/Transactions";
 import AccountPage from "./pages/Account";
 import RfidTestPage from "./pages/RfidTest";
@@ -47,8 +44,6 @@ function AppTabs() {
     <IonTabs>
       <IonRouterOutlet>
         <Route exact path="/home" component={HomePage} />
-        <Route exact path="/entry" component={EntryPage} />
-        <Route exact path="/exit" component={ExitPage} />
         <Route exact path="/transactions" component={TransactionsPage} />
         <Route exact path="/account" component={AccountPage} />
         <Route exact path="/" render={() => <Redirect to="/home" />} />
@@ -58,14 +53,6 @@ function AppTabs() {
         <IonTabButton tab="home" href="/home">
           <IonIcon icon={homeOutline} />
           <IonLabel>Home</IonLabel>
-        </IonTabButton>
-        <IonTabButton tab="entry" href="/entry">
-          <IonIcon icon={logInOutline} />
-          <IonLabel>Entry</IonLabel>
-        </IonTabButton>
-        <IonTabButton tab="exit" href="/exit">
-          <IonIcon icon={logOutOutline} />
-          <IonLabel>Exit</IonLabel>
         </IonTabButton>
         <IonTabButton tab="transactions" href="/transactions">
           <IonIcon icon={listOutline} />

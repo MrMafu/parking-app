@@ -1,4 +1,4 @@
-// prisma/seed.ts
+// run seeder: npx prisma db seed
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";

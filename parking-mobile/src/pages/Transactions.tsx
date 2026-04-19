@@ -20,13 +20,7 @@ import { apiFetch } from "../lib/api";
 
 type Transaction = {
   id: number;
-  vehicle: {
-    id: number;
-    licensePlate: string;
-    color: string;
-    ownerName: string;
-    vehicleType: { id: number; name: string };
-  } | null;
+  tagId: string | null;
   parkingArea: { id: number; name: string } | null;
   entryTime: string;
   exitTime: string | null;
@@ -143,7 +137,7 @@ export default function TransactionsPage() {
                   }
                 >
                   <IonLabel>
-                    <h2>{txn.vehicle?.licensePlate ?? "N/A"}</h2>
+                    <h2>{txn.tagId ?? `#${txn.id}`}</h2>
                     <p>
                       {txn.parkingArea?.name ?? "N/A"} • {formatDate(txn.entryTime)}
                     </p>
@@ -161,13 +155,6 @@ export default function TransactionsPage() {
                     }}
                   >
                     <IonText color="medium">
-                      <p style={{ margin: "4px 0" }}>
-                        <strong>Type:</strong> {txn.vehicle?.vehicleType?.name ?? "N/A"} •{" "}
-                        <strong>Color:</strong> {txn.vehicle?.color ?? "N/A"}
-                      </p>
-                      <p style={{ margin: "4px 0" }}>
-                        <strong>Owner:</strong> {txn.vehicle?.ownerName ?? "N/A"}
-                      </p>
                       <p style={{ margin: "4px 0" }}>
                         <strong>Entry:</strong> {formatDate(txn.entryTime)}
                       </p>

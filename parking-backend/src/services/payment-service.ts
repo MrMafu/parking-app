@@ -19,7 +19,6 @@ export type PaymentDetail = {
     id: number;
     amountCents: number | null;
     status: string;
-    vehicle: { id: number; licensePlate: string } | null;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -39,7 +38,6 @@ const paymentSelect = {
       id: true,
       amountCents: true,
       status: true,
-      vehicle: { select: { id: true, licensePlate: true } },
     },
   },
 } as const;

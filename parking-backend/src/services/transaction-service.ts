@@ -5,13 +5,6 @@ import type { TransactionStatus } from "../../generated/prisma/enums";
 export type TransactionDetail = {
   id: number;
   attendant: { id: number; fullname: string; username: string } | null;
-  vehicle: {
-    id: number;
-    licensePlate: string;
-    color: string;
-    ownerName: string;
-    vehicleType: { id: number; name: string };
-  } | null;
   tagId: string | null;
   parkingArea: { id: number; name: string };
   rate: { id: number; name: string; rateType: string; priceCents: number } | null;
@@ -43,15 +36,6 @@ const transactionSelect = {
   createdAt: true,
   updatedAt: true,
   attendant: { select: { id: true, fullname: true, username: true } },
-  vehicle: {
-    select: {
-      id: true,
-      licensePlate: true,
-      color: true,
-      ownerName: true,
-      vehicleType: { select: { id: true, name: true } },
-    },
-  },
   parkingArea: { select: { id: true, name: true } },
   rate: { select: { id: true, name: true, rateType: true, priceCents: true } },
   payment: {
@@ -67,13 +51,11 @@ const transactionSelect = {
 export async function listTransactions(filters?: {
   status?: TransactionStatus;
   areaId?: number;
-  vehicleId?: number;
 }): Promise<TransactionDetail[]> {
   return prisma.transaction.findMany({
     where: {
       ...(filters?.status && { status: filters.status }),
       ...(filters?.areaId && { areaId: filters.areaId }),
-      ...(filters?.vehicleId && { vehicleId: filters.vehicleId }),
     },
     select: transactionSelect,
     orderBy: { id: "desc" },
@@ -106,78 +88,6 @@ export async function getTransactionByTagId(
 }
 
 /**
- * Create a new transaction (vehicle entry).
- * Validates parking area capacity before allowing entry.
- */
-export async function createTransaction(data: {
-  vehicleId: number;
-  areaId: number;
-  attendantId: number;
-}): Promise<TransactionDetail> {
-  return prisma.$transaction(async (tx): Promise<TransactionDetail> => {
-    // Check for existing open or awaiting-payment transaction for this vehicle
-    const existing = await tx.transaction.findFirst({
-      where: { vehicleId: data.vehicleId, status: { in: ["Open", "AwaitingPayment"] } },
-    });
-    if (existing) {
-      throw new Error("Vehicle already has an open transaction");
-    }
-
-    // Check parking area exists, is open, and has capacity
-    const area = await tx.parkingArea.findUnique({
-      where: { id: data.areaId },
-    });
-    if (!area) throw new Error("Parking area not found");
-    if (area.status !== "Open") throw new Error("Parking area is not open");
-
-    const occupied = await tx.transaction.count({
-      where: { areaId: data.areaId, status: "Open" },
-    });
-    if (occupied >= area.capacity) {
-      throw new Error("Parking area is full");
-    }
-
-    // Find applicable rate for this vehicle type
-    const vehicle = await tx.vehicle.findUnique({
-      where: { id: data.vehicleId },
-      select: { vehicleTypeId: true },
-    });
-    if (!vehicle) throw new Error("Vehicle not found");
-
-    const now = new Date();
-    const rate = await tx.rate.findFirst({
-      where: {
-        vehicleTypeId: vehicle.vehicleTypeId,
-        validFrom: { lte: now },
-        validTo: { gte: now },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return tx.transaction.create({
-      data: {
-        vehicleId: data.vehicleId,
-        areaId: data.areaId,
-        attendantId: data.attendantId,
-        rateId: rate?.id ?? null,
-        rateSnapshot: rate
-          ? {
-              id: rate.id,
-              name: rate.name,
-              rateType: rate.rateType,
-              priceCents: rate.priceCents,
-              graceMinutes: rate.graceMinutes,
-            }
-          : Prisma.DbNull,
-        entryTime: now,
-        status: "Open",
-      },
-      select: transactionSelect,
-    });
-  });
-}
-
-/**
  * Calculate the amount for a transaction based on the rate snapshot.
  */
 export function calculateAmount(
@@ -203,44 +113,6 @@ export function calculateAmount(
     default:
       return 0;
   }
-}
-
-/**
- * Exit a vehicle — calculate charges and move to AwaitingPayment.
- */
-export async function exitTransaction(id: number): Promise<TransactionDetail> {
-  return prisma.$transaction(async (tx): Promise<TransactionDetail> => {
-    const txn = await tx.transaction.findUnique({
-      where: { id },
-      select: { id: true, status: true, entryTime: true, rateSnapshot: true },
-    });
-    if (!txn) throw new Error("Transaction not found");
-    if (txn.status !== "Open") throw new Error("Transaction is not open");
-
-    const now = new Date();
-    const durationMinutes = Math.round(
-      (now.getTime() - txn.entryTime.getTime()) / 60000
-    );
-
-    const rateSnapshot = txn.rateSnapshot as {
-      rateType: string;
-      priceCents: number;
-      graceMinutes: number;
-    } | null;
-
-    const amountCents = calculateAmount(rateSnapshot, durationMinutes);
-
-    return tx.transaction.update({
-      where: { id },
-      data: {
-        exitTime: now,
-        durationMinutes,
-        amountCents,
-        status: "AwaitingPayment",
-      },
-      select: transactionSelect,
-    });
-  });
 }
 
 /**
@@ -311,29 +183,35 @@ export async function rfidEntry(data: {
 }
 
 /**
- * RFID exit — scan tag, assign vehicle type, look up rate, calculate charges.
+ * RFID exit — scan tag, look up rate from parking area's vehicle type, calculate charges.
  * Moves transaction from Open to AwaitingPayment.
  */
 export async function rfidExit(data: {
   tagId: string;
-  vehicleTypeId: number;
 }): Promise<TransactionDetail> {
   return prisma.$transaction(async (tx): Promise<TransactionDetail> => {
     const txn = await tx.transaction.findFirst({
       where: { tagId: data.tagId, status: "Open" },
-      select: { id: true, status: true, entryTime: true },
+      select: { id: true, status: true, entryTime: true, areaId: true },
     });
     if (!txn) throw new Error("No open transaction found for this tag");
+
+    // Get vehicle type from the parking area
+    const area = await tx.parkingArea.findUnique({
+      where: { id: txn.areaId },
+      select: { vehicleTypeId: true },
+    });
+    if (!area) throw new Error("Parking area not found");
 
     const now = new Date();
     const durationMinutes = Math.round(
       (now.getTime() - txn.entryTime.getTime()) / 60000
     );
 
-    // Find applicable rate for the selected vehicle type
+    // Find applicable rate for the area's vehicle type
     const rate = await tx.rate.findFirst({
       where: {
-        vehicleTypeId: data.vehicleTypeId,
+        vehicleTypeId: area.vehicleTypeId,
         validFrom: { lte: now },
         validTo: { gte: now },
       },

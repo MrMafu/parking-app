@@ -8,7 +8,7 @@ CREATE TYPE "ParkingAreaStatus" AS ENUM ('Open', 'Closed', 'Maintenance');
 CREATE TYPE "TransactionStatus" AS ENUM ('Open', 'AwaitingPayment', 'Closed', 'Cancelled');
 
 -- CreateEnum
-CREATE TYPE "PaymentMethod" AS ENUM ('Qris');
+CREATE TYPE "PaymentMethod" AS ENUM ('Qris', 'Cash');
 
 -- CreateEnum
 CREATE TYPE "PaymentStatus" AS ENUM ('Pending', 'Completed', 'Failed');
@@ -82,20 +82,6 @@ CREATE TABLE "vehicle_types" (
 );
 
 -- CreateTable
-CREATE TABLE "vehicles" (
-    "id" SERIAL NOT NULL,
-    "license_plate" TEXT NOT NULL,
-    "vehicle_type_id" INTEGER NOT NULL,
-    "color" TEXT NOT NULL,
-    "owner_name" TEXT NOT NULL,
-    "registered_by" INTEGER NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "vehicles_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "rates" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
@@ -115,6 +101,7 @@ CREATE TABLE "rates" (
 CREATE TABLE "parking_areas" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
+    "vehicle_type_id" INTEGER NOT NULL,
     "capacity" INTEGER NOT NULL,
     "location" TEXT,
     "status" "ParkingAreaStatus" NOT NULL DEFAULT 'Open',
@@ -128,7 +115,7 @@ CREATE TABLE "parking_areas" (
 CREATE TABLE "transactions" (
     "id" SERIAL NOT NULL,
     "attendant_id" INTEGER,
-    "vehicle_id" INTEGER NOT NULL,
+    "tag_id" TEXT,
     "area_id" INTEGER NOT NULL,
     "rate_id" INTEGER,
     "rate_snapshot" JSONB,
@@ -207,19 +194,10 @@ CREATE INDEX "activity_logs_user_id_idx" ON "activity_logs"("user_id");
 CREATE UNIQUE INDEX "vehicle_types_name_key" ON "vehicle_types"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "vehicles_license_plate_key" ON "vehicles"("license_plate");
-
--- CreateIndex
-CREATE INDEX "vehicles_vehicle_type_id_idx" ON "vehicles"("vehicle_type_id");
-
--- CreateIndex
-CREATE INDEX "vehicles_registered_by_idx" ON "vehicles"("registered_by");
-
--- CreateIndex
 CREATE INDEX "rates_vehicle_type_id_idx" ON "rates"("vehicle_type_id");
 
 -- CreateIndex
-CREATE INDEX "transactions_vehicle_id_idx" ON "transactions"("vehicle_id");
+CREATE INDEX "parking_areas_vehicle_type_id_idx" ON "parking_areas"("vehicle_type_id");
 
 -- CreateIndex
 CREATE INDEX "transactions_area_id_idx" ON "transactions"("area_id");
@@ -229,6 +207,9 @@ CREATE INDEX "transactions_attendant_id_idx" ON "transactions"("attendant_id");
 
 -- CreateIndex
 CREATE INDEX "transactions_rate_id_idx" ON "transactions"("rate_id");
+
+-- CreateIndex
+CREATE INDEX "transactions_tag_id_idx" ON "transactions"("tag_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "payments_transaction_id_key" ON "payments"("transaction_id");
@@ -261,19 +242,13 @@ ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_permission_id_fk
 ALTER TABLE "activity_logs" ADD CONSTRAINT "activity_logs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "vehicles" ADD CONSTRAINT "vehicles_vehicle_type_id_fkey" FOREIGN KEY ("vehicle_type_id") REFERENCES "vehicle_types"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "vehicles" ADD CONSTRAINT "vehicles_registered_by_fkey" FOREIGN KEY ("registered_by") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "rates" ADD CONSTRAINT "rates_vehicle_type_id_fkey" FOREIGN KEY ("vehicle_type_id") REFERENCES "vehicle_types"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "transactions" ADD CONSTRAINT "transactions_attendant_id_fkey" FOREIGN KEY ("attendant_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "parking_areas" ADD CONSTRAINT "parking_areas_vehicle_type_id_fkey" FOREIGN KEY ("vehicle_type_id") REFERENCES "vehicle_types"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "transactions" ADD CONSTRAINT "transactions_vehicle_id_fkey" FOREIGN KEY ("vehicle_id") REFERENCES "vehicles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "transactions" ADD CONSTRAINT "transactions_attendant_id_fkey" FOREIGN KEY ("attendant_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "transactions" ADD CONSTRAINT "transactions_area_id_fkey" FOREIGN KEY ("area_id") REFERENCES "parking_areas"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

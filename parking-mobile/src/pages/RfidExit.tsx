@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   IonButton,
   IonCard,
@@ -11,8 +11,6 @@ import {
   IonLabel,
   IonList,
   IonPage,
-  IonSelect,
-  IonSelectOption,
   IonSpinner,
   IonText,
   IonTitle,
@@ -22,11 +20,6 @@ import {
 } from "@ionic/react";
 import { apiFetch } from "../lib/api";
 import { useRfidReader } from "../hooks/useRfidReader";
-
-type VehicleType = {
-  id: number;
-  name: string;
-};
 
 type Transaction = {
   id: number;
@@ -80,9 +73,6 @@ function formatDuration(minutes: number): string {
 export default function RfidExitPage() {
   const { tagId, isReading, reset: resetReader } = useRfidReader();
 
-  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
-  const [selectedTypeId, setSelectedTypeId] = useState<number | undefined>();
-
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [loading, setLoading] = useState(false);
@@ -96,21 +86,6 @@ export default function RfidExitPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Fetch vehicle types on mount
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await apiFetch("/vehicle-types");
-        if (res.ok) {
-          const json = await res.json();
-          setVehicleTypes(json.data);
-        }
-      } catch {
-        // ignore
-      }
-    })();
-  }, []);
-
   // Auto-lookup transaction when tag is scanned
   useEffect(() => {
     if (!tagId) return;
@@ -120,7 +95,6 @@ export default function RfidExitPage() {
       setError("");
       setTxn(null);
       setReceipt(null);
-      setSelectedTypeId(undefined);
 
       try {
         const res = await apiFetch(
@@ -212,14 +186,14 @@ export default function RfidExitPage() {
   };
 
   const handleExit = async () => {
-    if (!tagId || !selectedTypeId) return;
+    if (!tagId) return;
     setProcessing(true);
     setError("");
 
     try {
       const res = await apiFetch("/transactions/rfid-exit", {
         method: "POST",
-        body: JSON.stringify({ tagId, vehicleTypeId: selectedTypeId }),
+        body: JSON.stringify({ tagId }),
       });
       const json = await res.json();
       if (res.ok) {
@@ -326,7 +300,6 @@ export default function RfidExitPage() {
     resetReader();
     setTxn(null);
     setReceipt(null);
-    setSelectedTypeId(undefined);
     setQrImageUrl(null);
     setPaymentId(null);
     setQrExpiry(0);
@@ -453,37 +426,11 @@ export default function RfidExitPage() {
                 )}
               </IonList>
 
-              {/* Vehicle type selection */}
-              <IonCard style={{ margin: "16px 0 0", boxShadow: "none", border: "1px solid var(--ion-color-light-shade)" }}>
-                <IonCardHeader>
-                  <IonCardTitle style={{ fontSize: 14 }}>
-                    Select Vehicle Type
-                  </IonCardTitle>
-                </IonCardHeader>
-                <IonCardContent>
-                  <IonList>
-                    <IonItem>
-                      <IonSelect
-                        placeholder="Choose vehicle type"
-                        value={selectedTypeId}
-                        onIonChange={(e) => setSelectedTypeId(e.detail.value)}
-                      >
-                        {vehicleTypes.map((vt) => (
-                          <IonSelectOption key={vt.id} value={vt.id}>
-                            {vt.name}
-                          </IonSelectOption>
-                        ))}
-                      </IonSelect>
-                    </IonItem>
-                  </IonList>
-                </IonCardContent>
-              </IonCard>
-
               <IonButton
                 expand="block"
                 color="warning"
                 onClick={handleExit}
-                disabled={!selectedTypeId || processing}
+                disabled={processing}
                 className="ion-margin-top"
               >
                 {processing ? (
