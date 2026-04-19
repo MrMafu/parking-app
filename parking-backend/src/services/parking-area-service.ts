@@ -51,6 +51,7 @@ export async function getParkingAreaById(
 export async function createParkingArea(data: {
   name: string;
   capacity: number;
+  vehicleTypeId: number;
   location?: string | null;
   status?: ParkingAreaStatus;
 }): Promise<ParkingAreaDetail> {
@@ -66,6 +67,7 @@ export async function updateParkingArea(
   data: {
     name?: string;
     capacity?: number;
+    vehicleTypeId?: number;
     location?: string | null;
     status?: ParkingAreaStatus;
   }

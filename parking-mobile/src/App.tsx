@@ -14,7 +14,6 @@ import {
   homeOutline,
   listOutline,
   personOutline,
-  scanOutline,
 } from "ionicons/icons";
 import LoginPage from "./pages/Login";
 import HomePage from "./pages/Home";

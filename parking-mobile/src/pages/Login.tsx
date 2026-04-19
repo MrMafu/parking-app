@@ -13,9 +13,11 @@ import {
   IonSpinner,
 } from "@ionic/react";
 import { useAuth } from "../context/AuthContext";
+import { useIonRouter } from "@ionic/react";
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const router = useIonRouter();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -28,6 +30,7 @@ export default function LoginPage() {
 
     try {
       await login(username, password);
+      router.push("/home", "root", "replace");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {

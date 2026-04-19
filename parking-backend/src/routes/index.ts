@@ -10,6 +10,7 @@ import transactions from "./transactions";
 import payments from "./payments";
 import receipts from "./receipts";
 import refunds from "./refunds";
+import reports from "./reports";
 
 const router = new Hono();
 
@@ -24,5 +25,6 @@ router.route("/transactions", transactions);
 router.route("/payments", payments);
 router.route("/receipts", receipts);
 router.route("/refunds", refunds);
+router.route("/reports", reports);
 
 export default router;

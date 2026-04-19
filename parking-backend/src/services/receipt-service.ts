@@ -81,19 +81,12 @@ export async function createReceipt(data: {
       where: { id: data.transactionId },
       select: {
         id: true,
+        tagId: true,
         entryTime: true,
         exitTime: true,
         durationMinutes: true,
         amountCents: true,
         rateSnapshot: true,
-        vehicle: {
-          select: {
-            licensePlate: true,
-            color: true,
-            ownerName: true,
-            vehicleType: { select: { name: true } },
-          },
-        },
         parkingArea: { select: { name: true } },
       },
     });
@@ -101,12 +94,7 @@ export async function createReceipt(data: {
 
     const receiptData = {
       transactionId: txn.id,
-      vehicle: {
-        licensePlate: txn.vehicle.licensePlate,
-        color: txn.vehicle.color,
-        ownerName: txn.vehicle.ownerName,
-        vehicleType: txn.vehicle.vehicleType.name,
-      },
+      tagId: txn.tagId,
       parkingArea: txn.parkingArea.name,
       entryTime: txn.entryTime.toISOString(),
       exitTime: txn.exitTime?.toISOString() ?? null,

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   IonBadge,
+  IonButton,
   IonCard,
   IonCardContent,
   IonCardHeader,
@@ -9,6 +10,7 @@ import {
   IonContent,
   IonGrid,
   IonHeader,
+  IonIcon,
   IonPage,
   IonProgressBar,
   IonRefresher,
@@ -19,7 +21,10 @@ import {
   IonTitle,
   IonToolbar,
 } from "@ionic/react";
+import { logInOutline, logOutOutline } from "ionicons/icons";
 import { apiFetch } from "../lib/api";
+import { useAuth } from "../context/AuthContext";
+import OwnerDashboard from "./OwnerDashboard";
 
 type ParkingArea = {
   id: number;
@@ -31,8 +36,15 @@ type ParkingArea = {
 };
 
 export default function HomePage() {
+  const { hasPermission } = useAuth();
+  const isOwner = hasPermission("reports.view");
+  const isAttendant = hasPermission("transactions.create");
+
   const [areas, setAreas] = useState<ParkingArea[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!isOwner); // only load areas for attendants
+
+  // Store owner dashboard refresh fn
+  const ownerRefreshRef = useRef<(() => Promise<void>) | null>(null);
 
   const fetchAreas = useCallback(async () => {
     try {
@@ -49,8 +61,8 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    fetchAreas();
-  }, [fetchAreas]);
+    if (!isOwner) fetchAreas();
+  }, [fetchAreas, isOwner]);
 
   const totalCapacity = areas.reduce((s, a) => s + a.capacity, 0);
   const totalOccupied = areas.reduce((s, a) => s + a.occupied, 0);
@@ -77,21 +89,63 @@ export default function HomePage() {
         <IonRefresher
           slot="fixed"
           onIonRefresh={async (e) => {
-            await fetchAreas();
+            if (isOwner) {
+              await ownerRefreshRef.current?.();
+            } else {
+              await fetchAreas();
+            }
             e.detail.complete();
           }}
         >
           <IonRefresherContent />
         </IonRefresher>
 
-        {loading ? (
-          <div className="ion-text-center ion-padding">
-            <IonSpinner />
-          </div>
-        ) : (
+        {/* Owner view: revenue dashboard */}
+        {isOwner && (
+          <OwnerDashboard
+            onRefresh={(fn) => {
+              ownerRefreshRef.current = fn;
+            }}
+          />
+        )}
+
+        {/* Attendant view: parking areas + RFID quick links */}
+        {isAttendant && (
           <>
+            {/* RFID Quick Actions */}
             <IonGrid className="ion-padding-horizontal">
               <IonRow>
+                <IonCol size="6">
+                  <IonButton
+                    expand="block"
+                    color="success"
+                    routerLink="/rfid-entry"
+                  >
+                    <IonIcon icon={logInOutline} slot="start" />
+                    RFID Entry
+                  </IonButton>
+                </IonCol>
+                <IonCol size="6">
+                  <IonButton
+                    expand="block"
+                    color="warning"
+                    routerLink="/rfid-exit"
+                  >
+                    <IonIcon icon={logOutOutline} slot="start" />
+                    RFID Exit
+                  </IonButton>
+                </IonCol>
+              </IonRow>
+            </IonGrid>
+
+            {loading ? (
+              <div className="ion-text-center ion-padding">
+                <IonSpinner />
+              </div>
+            ) : (
+              <>
+                <IonGrid className="ion-padding-horizontal">
+                  <IonRow>
                 <IonCol size="6">
                   <IonCard>
                     <IonCardContent className="ion-text-center">
@@ -156,6 +210,8 @@ export default function HomePage() {
                 </IonCard>
               );
             })}
+          </>
+        )}
           </>
         )}
       </IonContent>

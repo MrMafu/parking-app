@@ -54,14 +54,14 @@ export async function updateVehicleType(
 }
 
 export async function deleteVehicleType(id: number): Promise<void> {
-  const [vehicleCount, rateCount] = await Promise.all([
-    prisma.vehicle.count({ where: { vehicleTypeId: id } }),
+  const [parkingAreaCount, rateCount] = await Promise.all([
+    prisma.parkingArea.count({ where: { vehicleTypeId: id } }),
     prisma.rate.count({ where: { vehicleTypeId: id } }),
   ]);
 
-  if (vehicleCount > 0 || rateCount > 0) {
+  if (parkingAreaCount > 0 || rateCount > 0) {
     throw new Error(
-      `Cannot delete: ${vehicleCount} vehicle(s) and ${rateCount} rate(s) still reference this type`,
+      `Cannot delete: ${parkingAreaCount} parking area(s) and ${rateCount} rate(s) still reference this type`,
     );
   }
 
