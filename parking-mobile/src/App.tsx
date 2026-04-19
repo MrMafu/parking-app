@@ -66,7 +66,9 @@ function AppTabs() {
   );
 }
 
-const PUBLIC_RFID_PATHS = ["/rfid-test", "/rfid-entry", "/rfid-exit"];
+const PUBLIC_RFID_PATHS = ["/rfid-test", "/rfid-exit"];
+const isPublicRfidPath = (path: string) =>
+  PUBLIC_RFID_PATHS.includes(path) || path.startsWith("/rfid-entry/");
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -79,7 +81,7 @@ function AppRoutes() {
     <IonRouterOutlet>
       {/* Public RFID pages — no auth required */}
       <Route exact path="/rfid-test" component={RfidTestPage} />
-      <Route exact path="/rfid-entry" component={RfidEntryPage} />
+      <Route exact path="/rfid-entry/:areaId" component={RfidEntryPage} />
       <Route exact path="/rfid-exit" component={RfidExitPage} />
 
       {!user ? (
@@ -87,7 +89,7 @@ function AppRoutes() {
           <Route exact path="/login" component={LoginPage} />
           <Route
             render={({ location }) =>
-              PUBLIC_RFID_PATHS.includes(location.pathname) ? null : (
+              isPublicRfidPath(location.pathname) ? null : (
                 <Redirect to="/login" />
               )
             }
@@ -97,7 +99,7 @@ function AppRoutes() {
         <>
           <Route exact path="/login" render={() => <Redirect to="/home" />} />
           <Route render={({ location }) => {
-            if (PUBLIC_RFID_PATHS.includes(location.pathname)) return null;
+            if (isPublicRfidPath(location.pathname)) return null;
             return <AppTabs />;
           }} />
         </>

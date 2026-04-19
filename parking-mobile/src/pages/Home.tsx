@@ -22,6 +22,7 @@ import {
   IonToolbar,
 } from "@ionic/react";
 import { logInOutline, logOutOutline } from "ionicons/icons";
+import { useIonRouter } from "@ionic/react";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import OwnerDashboard from "./OwnerDashboard";
@@ -39,6 +40,7 @@ export default function HomePage() {
   const { hasPermission } = useAuth();
   const isOwner = hasPermission("reports.view");
   const isAttendant = hasPermission("transactions.create");
+  const router = useIonRouter();
 
   const [areas, setAreas] = useState<ParkingArea[]>([]);
   const [loading, setLoading] = useState(!isOwner); // only load areas for attendants
@@ -115,21 +117,11 @@ export default function HomePage() {
             {/* RFID Quick Actions */}
             <IonGrid className="ion-padding-horizontal">
               <IonRow>
-                <IonCol size="6">
-                  <IonButton
-                    expand="block"
-                    color="success"
-                    routerLink="/rfid-entry"
-                  >
-                    <IonIcon icon={logInOutline} slot="start" />
-                    RFID Entry
-                  </IonButton>
-                </IonCol>
-                <IonCol size="6">
+                <IonCol>
                   <IonButton
                     expand="block"
                     color="warning"
-                    routerLink="/rfid-exit"
+                    onClick={() => router.push("/rfid-exit", "forward")}
                   >
                     <IonIcon icon={logOutOutline} slot="start" />
                     RFID Exit
@@ -206,6 +198,18 @@ export default function HomePage() {
                         {area.location ? ` • ${area.location}` : ""}
                       </p>
                     </IonText>
+                    {area.status === "Open" && area.occupied < area.capacity && (
+                      <IonButton
+                        expand="block"
+                        size="small"
+                        color="success"
+                        onClick={() => router.push(`/rfid-entry/${area.id}`, "forward")}
+                        style={{ marginTop: 8 }}
+                      >
+                        <IonIcon icon={logInOutline} slot="start" />
+                        RFID Entry
+                      </IonButton>
+                    )}
                   </IonCardContent>
                 </IonCard>
               );
