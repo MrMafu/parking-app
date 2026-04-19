@@ -118,7 +118,7 @@ export default function TransactionsPage() {
 
         {loading ? (
           <div className="ion-text-center ion-padding">
-            <IonSpinner />
+            <IonSpinner name="dots" />
           </div>
         ) : transactions.length === 0 ? (
           <div className="ion-text-center ion-padding">

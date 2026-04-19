@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
-import type { ParkingArea } from "@/types";
+import type { ParkingArea, VehicleType } from "@/types";
 import PageHeader from "@/components/ui/PageHeader";
 import DataTable from "@/components/ui/DataTable";
 import Modal from "@/components/ui/Modal";
@@ -16,11 +16,12 @@ const STATUS_STYLES: Record<ParkingArea["status"], string> = {
   Maintenance: "bg-warning text-dark",
 };
 
-type FormState = { name: string; capacity: string; location: string; status: ParkingArea["status"] };
-const emptyForm: FormState = { name: "", capacity: "", location: "", status: "Open" };
+type FormState = { name: string; capacity: string; location: string; status: ParkingArea["status"]; vehicleTypeId: string };
+const emptyForm: FormState = { name: "", capacity: "", location: "", status: "Open", vehicleTypeId: "" };
 
 export default function ParkingAreasPage() {
   const [areas, setAreas] = useState<ParkingArea[]>([]);
+  const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ParkingArea | null>(null);
@@ -32,10 +33,17 @@ export default function ParkingAreasPage() {
   const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(new Set());
 
   const fetchData = useCallback(async () => {
-    const res = await apiFetch("/parking-areas");
-    if (res.ok) {
-      const d = await res.json();
+    const [areaRes, vtRes] = await Promise.all([
+      apiFetch("/parking-areas"),
+      apiFetch("/vehicle-types"),
+    ]);
+    if (areaRes.ok) {
+      const d = await areaRes.json();
       setAreas(d.data);
+    }
+    if (vtRes.ok) {
+      const d = await vtRes.json();
+      setVehicleTypes(d.data);
     }
     setLoading(false);
   }, []);
@@ -51,7 +59,7 @@ export default function ParkingAreasPage() {
 
   const openEdit = (area: ParkingArea) => {
     setEditing(area);
-    setForm({ name: area.name, capacity: String(area.capacity), location: area.location ?? "", status: area.status });
+    setForm({ name: area.name, capacity: String(area.capacity), location: area.location ?? "", status: area.status, vehicleTypeId: String(area.vehicleTypeId) });
     setError("");
     setModalOpen(true);
   };
@@ -64,6 +72,7 @@ export default function ParkingAreasPage() {
     const body = {
       name: form.name,
       capacity: Number(form.capacity),
+      vehicleTypeId: Number(form.vehicleTypeId),
       location: form.location || undefined,
       status: form.status,
     };
@@ -114,6 +123,7 @@ export default function ParkingAreasPage() {
 
   const columns = [
     { key: "name", label: "Name", sortable: true, sortValue: (a: ParkingArea) => a.name, render: (a: ParkingArea) => <span className="font-medium text-dark">{a.name}</span> },
+    { key: "vehicleType", label: "Vehicle Type", sortable: true, sortValue: (a: ParkingArea) => a.vehicleType.name, render: (a: ParkingArea) => <span className="text-dark">{a.vehicleType.name}</span> },
     { key: "location", label: "Location", sortable: true, sortValue: (a: ParkingArea) => a.location ?? "", className: "hidden md:table-cell", render: (a: ParkingArea) => <span className="text-medium">{a.location ?? "—"}</span> },
     { key: "capacity", label: "Capacity", sortable: true, sortValue: (a: ParkingArea) => a.capacity, render: (a: ParkingArea) => <span className="text-dark">{a.capacity}</span> },
     {
@@ -182,6 +192,13 @@ export default function ParkingAreasPage() {
           <div className="space-y-1">
             <label className="block text-sm font-medium text-dark">Capacity</label>
             <input required type="number" min={1} value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} className="w-full rounded-xl px-4 py-2.5 text-sm border border-light-shade bg-light text-dark outline-none focus:border-primary" />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-dark">Vehicle Type</label>
+            <select required value={form.vehicleTypeId} onChange={(e) => setForm({ ...form, vehicleTypeId: e.target.value })} className="w-full rounded-xl px-4 py-2.5 text-sm border border-light-shade bg-light text-dark outline-none focus:border-primary">
+              <option value="">Select vehicle type</option>
+              {vehicleTypes.map((vt) => <option key={vt.id} value={vt.id}>{vt.name}</option>)}
+            </select>
           </div>
           <div className="space-y-1">
             <label className="block text-sm font-medium text-dark">Location</label>

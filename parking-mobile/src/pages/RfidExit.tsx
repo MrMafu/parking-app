@@ -7,6 +7,7 @@ import {
   IonCardTitle,
   IonContent,
   IonHeader,
+  IonInput,
   IonItem,
   IonLabel,
   IonList,
@@ -16,7 +17,6 @@ import {
   IonTitle,
   IonToolbar,
   IonBadge,
-  IonNote,
 } from "@ionic/react";
 import { apiFetch } from "../lib/api";
 import { useRfidReader } from "../hooks/useRfidReader";
@@ -71,7 +71,8 @@ function formatDuration(minutes: number): string {
 }
 
 export default function RfidExitPage() {
-  const { tagId, isReading, reset: resetReader } = useRfidReader();
+  const { tagId, isReading, reset: resetReader, setManualTagId } = useRfidReader();
+  const [manualInput, setManualInput] = useState("");
 
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
@@ -295,6 +296,13 @@ export default function RfidExitPage() {
     }
   };
 
+  const handleManualSubmit = () => {
+    if (manualInput.trim()) {
+      setManualTagId(manualInput.trim());
+      setManualInput("");
+    }
+  };
+
   const handleReset = () => {
     stopPolling();
     resetReader();
@@ -304,6 +312,7 @@ export default function RfidExitPage() {
     setPaymentId(null);
     setQrExpiry(0);
     setError("");
+    setManualInput("");
   };
 
   return (
@@ -372,6 +381,23 @@ export default function RfidExitPage() {
                 </span>
               )}
             </div>
+          {/* Manual input fallback */}
+            {!tagId && (
+              <div style={{ marginTop: 8 }}>
+                <IonItem>
+                  <IonInput
+                    placeholder="Enter tag ID manually"
+                    value={manualInput}
+                    onIonInput={(e) => setManualInput(e.detail.value ?? "")}
+                    onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
+                    clearInput
+                  />
+                  <IonButton slot="end" size="small" onClick={handleManualSubmit} disabled={!manualInput.trim()}>
+                    Set
+                  </IonButton>
+                </IonItem>
+              </div>
+            )}
           </IonCardContent>
         </IonCard>
 

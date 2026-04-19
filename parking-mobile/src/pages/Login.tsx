@@ -11,6 +11,7 @@ import {
   IonHeader,
   IonLabel,
   IonSpinner,
+  IonInputPasswordToggle,
 } from "@ionic/react";
 import { useAuth } from "../context/AuthContext";
 import { useIonRouter } from "@ionic/react";
@@ -61,7 +62,9 @@ export default function LoginPage() {
             type="password"
             value={password}
             onIonInput={(e) => setPassword(e.detail.value ?? "")}
-          />
+          >
+            <IonInputPasswordToggle slot="end" />
+          </IonInput>
         </IonItem>
 
         {error && (

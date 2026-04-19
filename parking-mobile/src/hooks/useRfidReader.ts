@@ -109,5 +109,17 @@ export function useRfidReader(options: UseRfidReaderOptions = {}) {
     };
   }, [enabled, maxKeystrokeGap, minTagLength, clearBuffer]);
 
-  return { ...state, reset };
+  const setManualTagId = useCallback((tag: string) => {
+    const trimmed = tag.trim();
+    if (trimmed.length < minTagLength) return;
+    lastAcceptedTagRef.current = trimmed;
+    setState((prev) => ({
+      tagId: trimmed,
+      isReading: false,
+      scanCount: prev.scanCount + 1,
+      lastScanTime: new Date(),
+    }));
+  }, [minTagLength]);
+
+  return { ...state, reset, setManualTagId };
 }

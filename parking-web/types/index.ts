@@ -15,6 +15,8 @@ export type ParkingArea = {
   occupied: number;
   location: string | null;
   status: "Open" | "Closed" | "Maintenance";
+  vehicleTypeId: number;
+  vehicleType: { id: number; name: string };
 };
 
 export type VehicleType = {

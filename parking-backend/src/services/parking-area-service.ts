@@ -8,6 +8,8 @@ export type ParkingAreaDetail = {
   occupied: number;
   location: string | null;
   status: ParkingAreaStatus;
+  vehicleTypeId: number;
+  vehicleType: { id: number; name: string };
   createdAt: Date;
   updatedAt: Date;
 };
@@ -18,6 +20,8 @@ const parkingAreaSelect = {
   capacity: true,
   location: true,
   status: true,
+  vehicleTypeId: true,
+  vehicleType: { select: { id: true, name: true } },
   createdAt: true,
   updatedAt: true,
 } as const;

@@ -7,6 +7,7 @@ import {
   IonCardTitle,
   IonContent,
   IonHeader,
+  IonInput,
   IonItem,
   IonLabel,
   IonList,
@@ -32,7 +33,8 @@ type ParkingArea = {
 };
 
 export default function RfidEntryPage() {
-  const { tagId, isReading, scanCount, reset: resetReader } = useRfidReader();
+  const { tagId, isReading, scanCount, reset: resetReader, setManualTagId } = useRfidReader();
+  const [manualInput, setManualInput] = useState("");
 
   // Parking area selection
   const [areas, setAreas] = useState<ParkingArea[]>([]);
@@ -97,6 +99,14 @@ export default function RfidEntryPage() {
     setSuccessMsg("");
     setError("");
     setSelectedAreaId(undefined);
+    setManualInput("");
+  };
+
+  const handleManualSubmit = () => {
+    if (manualInput.trim()) {
+      setManualTagId(manualInput.trim());
+      setManualInput("");
+    }
   };
 
   return (
@@ -167,6 +177,24 @@ export default function RfidEntryPage() {
             <IonNote style={{ display: "block", marginTop: 8, textAlign: "center" }}>
               Total scans this session: {scanCount}
             </IonNote>
+
+            {/* Manual input fallback */}
+            {!tagId && (
+              <div style={{ marginTop: 16 }}>
+                <IonItem>
+                  <IonInput
+                    placeholder="Enter tag ID manually"
+                    value={manualInput}
+                    onIonInput={(e) => setManualInput(e.detail.value ?? "")}
+                    onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
+                    clearInput
+                  />
+                  <IonButton slot="end" size="small" onClick={handleManualSubmit} disabled={!manualInput.trim()}>
+                    Set
+                  </IonButton>
+                </IonItem>
+              </div>
+            )}
           </IonCardContent>
         </IonCard>
 
