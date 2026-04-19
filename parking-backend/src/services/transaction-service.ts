@@ -115,9 +115,9 @@ export async function createTransaction(data: {
   attendantId: number;
 }): Promise<TransactionDetail> {
   return prisma.$transaction(async (tx): Promise<TransactionDetail> => {
-    // Check for existing open transaction for this vehicle
+    // Check for existing open or awaiting-payment transaction for this vehicle
     const existing = await tx.transaction.findFirst({
-      where: { vehicleId: data.vehicleId, status: "Open" },
+      where: { vehicleId: data.vehicleId, status: { in: ["Open", "AwaitingPayment"] } },
     });
     if (existing) {
       throw new Error("Vehicle already has an open transaction");
@@ -273,9 +273,9 @@ export async function rfidEntry(data: {
   attendantId?: number;
 }): Promise<TransactionDetail> {
   return prisma.$transaction(async (tx): Promise<TransactionDetail> => {
-    // Check for existing open transaction for this tag
+    // Check for existing open or awaiting-payment transaction for this tag
     const existing = await tx.transaction.findFirst({
-      where: { tagId: data.tagId, status: "Open" },
+      where: { tagId: data.tagId, status: { in: ["Open", "AwaitingPayment"] } },
     });
     if (existing) {
       throw new Error("Tag already has an open transaction");
