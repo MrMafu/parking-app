@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   IonButton,
   IonCard,
@@ -116,6 +117,41 @@ export default function RfidExitPage() {
 
     lookup();
   }, [tagId]);
+
+  // Support loading via query params: ?txnId=123 or ?tag=TAGID
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const txnId = params.get("txnId");
+    const tag = params.get("tag");
+    if (tag) {
+      // set manual tag so UI shows it and lookup triggers
+      setManualTagId(tag);
+      return;
+    }
+    if (txnId) {
+      const loadTxn = async () => {
+        setLoading(true);
+        setError("");
+        try {
+          const res = await apiFetch(`/transactions/${encodeURIComponent(txnId)}`);
+          const json = await res.json();
+          if (res.ok) {
+            setTxn(json.data);
+            if (json.data?.tagId) setManualTagId(json.data.tagId);
+          } else {
+            setError(json.message || "Transaction not found");
+          }
+        } catch {
+          setError("Failed to load transaction");
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadTxn();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   const liveDuration =
     txn && txn.status === "Open"

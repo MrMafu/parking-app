@@ -11,6 +11,8 @@ import payments from "./payments";
 import receipts from "./receipts";
 import refunds from "./refunds";
 import reports from "./reports";
+import entryRequests from "./entry-requests";
+import exitRequests from "./exit-requests";
 
 const router = new Hono();
 
@@ -22,6 +24,8 @@ router.route("/parking-areas", parkingAreas);
 router.route("/activity-logs", activityLogs);
 router.route("/roles", roles);
 router.route("/transactions", transactions);
+router.route("/entry-requests", entryRequests);
+router.route("/exit-requests", exitRequests);
 router.route("/payments", payments);
 router.route("/receipts", receipts);
 router.route("/refunds", refunds);

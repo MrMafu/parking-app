@@ -44,6 +44,12 @@ export default function HomePage() {
 
   const [areas, setAreas] = useState<ParkingArea[]>([]);
   const [loading, setLoading] = useState(!isOwner); // only load areas for attendants
+  const [entryRequests, setEntryRequests] = useState<Array<{id:number; tagId:string; areaId:number; createdAt:string}>>([]);
+  const [exitRequests, setExitRequests] = useState<Array<{id:number; tagId:string; createdAt:string}>>([]);
+  const [awaitingPayments, setAwaitingPayments] = useState<Array<{id:number; tagId:string | null; amountCents:number | null; entryTime:string}>>([]);
+  const [awaitingPaymentsLoading, setAwaitingPaymentsLoading] = useState(false);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [exitRequestsLoading, setExitRequestsLoading] = useState(false);
 
   // Store owner dashboard refresh fn
   const ownerRefreshRef = useRef<(() => Promise<void>) | null>(null);
@@ -64,7 +70,118 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!isOwner) fetchAreas();
+    if (isAttendant) fetchEntryRequests();
+    if (isAttendant) fetchExitRequests();
+    if (isAttendant) fetchAwaitingPayments();
   }, [fetchAreas, isOwner]);
+
+  const fetchAwaitingPayments = async () => {
+    setAwaitingPaymentsLoading(true);
+    try {
+      const res = await apiFetch(`/transactions?status=AwaitingPayment`);
+      if (res.ok) {
+        const json = await res.json();
+        setAwaitingPayments(json.data || []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setAwaitingPaymentsLoading(false);
+    }
+  };
+
+  const fetchEntryRequests = async () => {
+    setRequestsLoading(true);
+    try {
+      const res = await apiFetch("/entry-requests");
+      if (res.ok) {
+        const json = await res.json();
+        setEntryRequests(json.data || []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  const fetchExitRequests = async () => {
+    setExitRequestsLoading(true);
+    try {
+      const res = await apiFetch("/exit-requests");
+      if (res.ok) {
+        const json = await res.json();
+        setExitRequests(json.data || []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setExitRequestsLoading(false);
+    }
+  };
+
+  const approveRequest = async (id: number) => {
+    try {
+      const res = await apiFetch(`/entry-requests/${id}/approve`, { method: "POST" });
+      if (res.ok) {
+        // refresh lists
+        await fetchEntryRequests();
+        await fetchAreas();
+      } else {
+        const json = await res.json();
+        alert(json.message || "Failed to approve request");
+      }
+    } catch {
+      alert("Network error");
+    }
+  };
+
+  const approveExitRequest = async (id: number) => {
+    try {
+      const res = await apiFetch(`/exit-requests/${id}/approve`, { method: "POST" });
+      const json = await res.json();
+      if (res.ok) {
+        // Navigate attendant to the exit screen preloaded with the transaction
+        const txn = json.data;
+        await fetchExitRequests();
+        if (txn && txn.id) {
+          router.push(`/rfid-exit?txnId=${txn.id}`, "forward");
+        }
+      } else {
+        alert(json.message || "Failed to approve exit request");
+      }
+    } catch {
+      alert("Network error");
+    }
+  };
+
+  const rejectExitRequest = async (id: number) => {
+    try {
+      const res = await apiFetch(`/exit-requests/${id}/reject`, { method: "POST" });
+      if (res.ok) {
+        await fetchExitRequests();
+      } else {
+        const json = await res.json();
+        alert(json.message || "Failed to reject exit request");
+      }
+    } catch {
+      alert("Network error");
+    }
+  };
+
+  const rejectRequest = async (id: number) => {
+    try {
+      const res = await apiFetch(`/entry-requests/${id}/reject`, { method: "POST" });
+      if (res.ok) {
+        await fetchEntryRequests();
+      } else {
+        const json = await res.json();
+        alert(json.message || "Failed to reject request");
+      }
+    } catch {
+      alert("Network error");
+    }
+  };
 
   const totalCapacity = areas.reduce((s, a) => s + a.capacity, 0);
   const totalOccupied = areas.reduce((s, a) => s + a.occupied, 0);
@@ -129,6 +246,86 @@ export default function HomePage() {
                 </IonCol>
               </IonRow>
             </IonGrid>
+
+            {/* Pending entry requests (attendant) */}
+            <div className="ion-padding-horizontal">
+              <h6 style={{ marginTop: 8 }}>Pending Entry Requests</h6>
+              {requestsLoading ? (
+                <div style={{ padding: 8 }}><IonSpinner /></div>
+              ) : entryRequests.length === 0 ? (
+                <div style={{ padding: 8 }}><IonText color="medium">No pending requests</IonText></div>
+              ) : (
+                entryRequests.map((r) => (
+                  <IonCard key={r.id} style={{ marginTop: 8 }}>
+                    <IonCardContent>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>{r.tagId}</div>
+                          <div style={{ fontSize: 12, color: '#666' }}>Area: {r.areaId} • {new Date(r.createdAt).toLocaleTimeString()}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <IonButton size="small" color="success" onClick={() => approveRequest(r.id)}>Approve</IonButton>
+                          <IonButton size="small" color="danger" onClick={() => rejectRequest(r.id)}>Reject</IonButton>
+                        </div>
+                      </div>
+                    </IonCardContent>
+                  </IonCard>
+                ))
+              )}
+            </div>
+
+            {/* Pending exit requests (attendant) */}
+            <div className="ion-padding-horizontal">
+              <h6 style={{ marginTop: 8 }}>Pending Exit Requests</h6>
+              {exitRequestsLoading ? (
+                <div style={{ padding: 8 }}><IonSpinner /></div>
+              ) : exitRequests.length === 0 ? (
+                <div style={{ padding: 8 }}><IonText color="medium">No pending exit requests</IonText></div>
+              ) : (
+                exitRequests.map((r) => (
+                  <IonCard key={r.id} style={{ marginTop: 8 }}>
+                    <IonCardContent>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>{r.tagId}</div>
+                          <div style={{ fontSize: 12, color: '#666' }}>{new Date(r.createdAt).toLocaleTimeString()}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <IonButton size="small" color="success" onClick={() => approveExitRequest(r.id)}>Approve</IonButton>
+                          <IonButton size="small" color="danger" onClick={() => rejectExitRequest(r.id)}>Reject</IonButton>
+                        </div>
+                      </div>
+                    </IonCardContent>
+                  </IonCard>
+                ))
+              )}
+            </div>
+
+            {/* Awaiting payments */}
+            <div className="ion-padding-horizontal">
+              <h6 style={{ marginTop: 8 }}>Awaiting Payments</h6>
+              {awaitingPaymentsLoading ? (
+                <div style={{ padding: 8 }}><IonSpinner /></div>
+              ) : awaitingPayments.length === 0 ? (
+                <div style={{ padding: 8 }}><IonText color="medium">No awaiting payments</IonText></div>
+              ) : (
+                awaitingPayments.map((a) => (
+                  <IonCard key={a.id} style={{ marginTop: 8 }}>
+                    <IonCardContent>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 700 }}>{a.tagId ?? `#${a.id}`}</div>
+                          <div style={{ fontSize: 12, color: '#666' }}>{new Date(a.entryTime).toLocaleTimeString()}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <IonButton size="small" color="primary" onClick={() => router.push(`/rfid-exit?txnId=${a.id}`, "forward")}>Continue</IonButton>
+                        </div>
+                      </div>
+                    </IonCardContent>
+                  </IonCard>
+                ))
+              )}
+            </div>
 
             {loading ? (
               <div className="ion-text-center ion-padding">

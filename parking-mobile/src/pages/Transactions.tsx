@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useIonRouter } from "@ionic/react";
 import {
   IonBadge,
   IonContent,
@@ -59,6 +60,7 @@ function formatCents(cents: number): string {
 }
 
 export default function TransactionsPage() {
+  const router = useIonRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<StatusFilter>("All");
@@ -181,6 +183,24 @@ export default function TransactionsPage() {
                         </p>
                       )}
                     </IonText>
+                    {(txn.status === "AwaitingPayment" || txn.status === "Open") && (
+                      <div style={{ marginTop: 8 }}>
+                        <button
+                          onClick={() => router.push(`/rfid-exit?txnId=${txn.id}`, "forward")}
+                          style={{
+                            background: "var(--ion-color-primary)",
+                            color: "white",
+                            padding: "10px 14px",
+                            borderRadius: 8,
+                            border: "none",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                          }}
+                        >
+                          Continue
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

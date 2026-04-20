@@ -27,6 +27,17 @@ parkingAreas.get(
   }
 );
 
+// GET /parking-areas/:id (public, for gate kiosk)
+parkingAreas.get("/public/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (isNaN(id)) return c.json({ message: "Invalid ID" }, 400);
+
+  const area = await getParkingAreaById(id);
+  if (!area) return c.json({ message: "Parking area not found" }, 404);
+
+  return c.json({ message: "Parking area retrieved", data: area });
+});
+
 // GET /parking-areas/:id
 parkingAreas.get(
   "/:id",
