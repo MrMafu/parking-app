@@ -2,7 +2,7 @@ import "dotenv/config"
 import { Hono } from "hono"
 import { serve } from "@hono/node-server"
 import { cors } from "hono/cors"
-import router from "./routes"
+import router from "./routes/index"
 
 const app = new Hono()
 
