@@ -171,7 +171,7 @@ export default function DashboardPage() {
             {logs.length === 0 ? (
               <div className="p-6 text-center text-medium text-sm">No recent activity.</div>
             ) : (
-              logs.slice(0, 10).map((log) => (
+              logs.slice(0, 5).map((log) => (
                 <div key={log.id} className="px-4 py-3 flex items-start gap-3">
                   <div className="w-8 h-8 rounded-full bg-primary-tint flex items-center justify-center shrink-0 mt-0.5">
                     <span className="text-white text-xs font-semibold">

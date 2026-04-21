@@ -14,6 +14,7 @@ import {
   IonText,
 } from "@ionic/react";
 import { apiFetch } from "../lib/api";
+import { ChartCard, RevenueLineChart, RevenueByAreaBarChart } from "../components/charts";
 
 type AreaRevenue = {
   areaId: number;
@@ -55,6 +56,8 @@ function formatDate(iso: string): string {
 export default function OwnerDashboard({ onRefresh }: { onRefresh?: (fn: () => Promise<void>) => void }) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recent, setRecent] = useState<RecentTransaction[]>([]);
+  const [revenueSeries, setRevenueSeries] = useState<Array<{ date: string; revenueCents: number }>>([]);
+  const [revenueByAreaData, setRevenueByAreaData] = useState<Array<{ areaName: string; revenueCents: number }>>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -62,6 +65,9 @@ export default function OwnerDashboard({ onRefresh }: { onRefresh?: (fn: () => P
       const [statsRes, txnRes] = await Promise.all([
         apiFetch("/reports/dashboard"),
         apiFetch("/transactions?status=Closed"),
+        // fetch revenue series for charts
+        apiFetch("/reports/revenue"),
+        apiFetch("/reports/revenue-by-area"),
       ]);
 
       if (statsRes.ok) {
@@ -72,6 +78,34 @@ export default function OwnerDashboard({ onRefresh }: { onRefresh?: (fn: () => P
       if (txnRes.ok) {
         const json = await txnRes.json();
         setRecent((json.data as RecentTransaction[]).slice(0, 10));
+      }
+
+      // revenue time series
+      try {
+        if ((await (await apiFetch("/reports/revenue")).ok)) {
+          const r = await (await apiFetch("/reports/revenue")).json();
+          setRevenueSeries(r.data || []);
+        }
+      } catch {
+        // ignore
+      }
+
+      // revenue by area (fallback to stats.revenueByArea)
+      try {
+        if ((await (await apiFetch("/reports/revenue-by-area")).ok)) {
+          const r2 = await (await apiFetch("/reports/revenue-by-area")).json();
+          setRevenueByAreaData(
+            (r2.data || []).map((it: any) => ({ areaName: it.areaName, revenueCents: it.revenueCents }))
+          );
+        } else if (statsRes.ok) {
+          // fallback from dashboard
+          const json = await statsRes.json();
+          setRevenueByAreaData(
+            (json.data.revenueByArea || []).map((it: any) => ({ areaName: it.areaName, revenueCents: it.revenue }))
+          );
+        }
+      } catch {
+        // ignore
       }
     } catch {
       // ignore
@@ -108,6 +142,15 @@ export default function OwnerDashboard({ onRefresh }: { onRefresh?: (fn: () => P
 
   return (
     <>
+      {/* Revenue line chart */}
+      <ChartCard title="Revenue (last 30 days)">
+        <RevenueLineChart data={revenueSeries.length ? revenueSeries : [{ date: "", revenueCents: 0 }]} />
+      </ChartCard>
+
+      {/* Revenue by area chart */}
+      <ChartCard title="Revenue by Area">
+        <RevenueByAreaBarChart data={revenueByAreaData.length ? revenueByAreaData : stats.revenueByArea.map(a => ({ areaName: a.areaName, revenueCents: a.revenue }))} />
+      </ChartCard>
             {/* Revenue Summary Cards */}
             <IonGrid className="ion-padding-horizontal">
               <IonRow>

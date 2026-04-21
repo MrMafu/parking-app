@@ -26,6 +26,7 @@ import { useIonRouter } from "@ionic/react";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import OwnerDashboard from "./OwnerDashboard";
+import { ChartCard, OccupancyBarChart, Sparkline } from "../components/charts";
 
 type ParkingArea = {
   id: number;
@@ -73,6 +74,7 @@ export default function HomePage() {
     if (isAttendant) fetchEntryRequests();
     if (isAttendant) fetchExitRequests();
     if (isAttendant) fetchAwaitingPayments();
+    if (isAttendant) fetchOccupancySeries();
   }, [fetchAreas, isOwner]);
 
   const fetchAwaitingPayments = async () => {
@@ -187,6 +189,30 @@ export default function HomePage() {
   const totalOccupied = areas.reduce((s, a) => s + a.occupied, 0);
   const occupancyPct = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
 
+  const [occupancySeries, setOccupancySeries] = useState<Record<number, Array<{ date: string; occupied: number }>>>({});
+
+  const fetchOccupancySeries = async () => {
+    try {
+      const to = new Date();
+      const from = new Date();
+      from.setDate(to.getDate() - 6); // last 7 days
+      const q = `from=${from.toISOString().slice(0,10)}&to=${to.toISOString().slice(0,10)}&groupBy=day`;
+      const res = await apiFetch(`/reports/occupancy-by-area?${q}`);
+      if (res.ok) {
+        const json = await res.json();
+        // expected shape: [{ areaId, areaName, date, occupied, capacity }]
+        const map: Record<number, Array<{ date: string; occupied: number }>> = {};
+        (json.data || []).forEach((row: any) => {
+          if (!map[row.areaId]) map[row.areaId] = [];
+          map[row.areaId].push({ date: row.date, occupied: row.occupied });
+        });
+        setOccupancySeries(map);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   const statusColor = (status: string) => {
     switch (status) {
       case "Open": return "success";
@@ -231,6 +257,10 @@ export default function HomePage() {
         {/* Attendant view: parking areas */}
         {isAttendant && (
           <>
+            {/* Occupancy chart summary for attendants */}
+            <ChartCard title="Area Occupancy">
+              <OccupancyBarChart data={areas.map(a => ({ areaName: a.name, occupied: a.occupied, capacity: a.capacity }))} />
+            </ChartCard>
             {/* Pending entry requests (attendant) */}
             <div className="ion-padding-horizontal">
               <h6 style={{ marginTop: 8 }}>Pending Entry Requests</h6>
@@ -364,7 +394,15 @@ export default function HomePage() {
                 <IonCard key={area.id}>
                   <IonCardHeader>
                     <IonCardTitle style={{ fontSize: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      {area.name}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div>{area.name}</div>
+                        {/* inline sparkline if available */}
+                        {occupancySeries[area.id] && (
+                          <div style={{ marginLeft: 8 }}>
+                            <Sparkline data={occupancySeries[area.id].map(s => ({ date: s.date, value: s.occupied }))} height={36} />
+                          </div>
+                        )}
+                      </div>
                       <IonBadge color={statusColor(area.status)}>{area.status}</IonBadge>
                     </IonCardTitle>
                   </IonCardHeader>
