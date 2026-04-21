@@ -3,15 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
-import type { ParkingArea, Vehicle, VehicleType, Rate, PublicUser, ActivityLog } from "@/types";
+import type { ParkingArea, VehicleType, Rate, PublicUser, ActivityLog } from "@/types";
 import {
   Building2,
   LayoutGrid,
   BarChart3,
-  Car,
   Users,
   CircleDollarSign,
-  Tag,
   type LucideIcon,
 } from "lucide-react";
 
@@ -34,7 +32,6 @@ function relativeTime(iso: string) {
 
 export default function DashboardPage() {
   const [areas, setAreas] = useState<ParkingArea[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [rates, setRates] = useState<Rate[]>([]);
   const [users, setUsers] = useState<PublicUser[]>([]);
@@ -43,9 +40,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const load = async () => {
-      const [areasRes, vehiclesRes, vtRes, ratesRes, usersRes, logsRes] = await Promise.all([
+      const [areasRes, vtRes, ratesRes, usersRes, logsRes] = await Promise.all([
         apiFetch("/parking-areas"),
-        apiFetch("/vehicles"),
         apiFetch("/vehicle-types"),
         apiFetch("/rates"),
         apiFetch("/users"),
@@ -53,7 +49,6 @@ export default function DashboardPage() {
       ]);
 
       if (areasRes.ok) setAreas((await areasRes.json()).data);
-      if (vehiclesRes.ok) setVehicles((await vehiclesRes.json()).data);
       if (vtRes.ok) setVehicleTypes((await vtRes.json()).data);
       if (ratesRes.ok) setRates((await ratesRes.json()).data);
       if (usersRes.ok) setUsers((await usersRes.json()).data);
@@ -76,12 +71,6 @@ export default function DashboardPage() {
   const now = new Date();
   const activeRates = rates.filter((r) => new Date(r.validTo) > now).length;
 
-  // Vehicle count per type
-  const vehiclesByType = new Map<number, number>();
-  for (const v of vehicles) {
-    vehiclesByType.set(v.vehicleTypeId, (vehiclesByType.get(v.vehicleTypeId) ?? 0) + 1);
-  }
-
   // Rate type breakdown
   const rateTypeCounts = { Hourly: 0, Daily: 0, Flat: 0 };
   for (const r of rates) {
@@ -91,7 +80,7 @@ export default function DashboardPage() {
   return (
     <>
       {/* ── Stat Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <StatCard
           label="Parking Areas"
           value={areas.length}
@@ -112,13 +101,6 @@ export default function DashboardPage() {
           sub={`${totalOccupied} / ${totalCapacity} slots`}
           color={occupancyPct > 80 ? "bg-danger" : occupancyPct > 50 ? "bg-warning" : "bg-success"}
           icon={BarChart3}
-        />
-        <StatCard
-          label="Vehicles"
-          value={vehicles.length}
-          sub="registered"
-          color="bg-tertiary"
-          icon={Car}
         />
         <StatCard
           label="Users"
@@ -189,7 +171,7 @@ export default function DashboardPage() {
             {logs.length === 0 ? (
               <div className="p-6 text-center text-medium text-sm">No recent activity.</div>
             ) : (
-              logs.slice(0, 10).map((log) => (
+              logs.slice(0, 5).map((log) => (
                 <div key={log.id} className="px-4 py-3 flex items-start gap-3">
                   <div className="w-8 h-8 rounded-full bg-primary-tint flex items-center justify-center shrink-0 mt-0.5">
                     <span className="text-white text-xs font-semibold">
@@ -215,39 +197,8 @@ export default function DashboardPage() {
         </section>
       </div>
 
-      {/* ── Bottom Row: Vehicle Types + Rates Overview ── */}
+      {/* ── Bottom Row: Rates Overview ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Vehicle Types Breakdown */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold text-dark">Vehicles by Type</h2>
-          <div className="bg-white rounded-2xl border border-light-shade divide-y divide-light-shade">
-            {vehicleTypes.length === 0 ? (
-              <div className="p-6 text-center text-medium text-sm">No vehicle types.</div>
-            ) : (
-              vehicleTypes.map((vt) => {
-                const count = vehiclesByType.get(vt.id) ?? 0;
-                const pct = vehicles.length > 0 ? Math.round((count / vehicles.length) * 100) : 0;
-                return (
-                  <div key={vt.id} className="px-5 py-4 flex items-center gap-4">
-                    <div className="w-9 h-9 rounded-xl bg-tertiary/10 flex items-center justify-center shrink-0">
-                      <Tag className="w-4 h-4 text-tertiary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-dark">{vt.name}</span>
-                        <span className="text-sm font-bold text-dark">{count}</span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-light-shade overflow-hidden">
-                        <div className="h-full rounded-full bg-tertiary" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </section>
-
         {/* Rates Overview */}
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-dark">Rates Overview</h2>

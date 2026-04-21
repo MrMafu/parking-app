@@ -1,4 +1,4 @@
-// prisma/seed.ts
+// run seeder: npx prisma db seed
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -196,7 +196,7 @@ async function main() {
     },
   });
 
-  // Attendant user example
+  // Attendant user
   const attendantPassword = await bcrypt.hash("attendant123!", 10);
   await prisma.user.upsert({
     where: { username: "attendant1" },
@@ -207,6 +207,21 @@ async function main() {
       email: "attendant1@parking.local",
       password: attendantPassword,
       roleId: attendantRole.id,
+      isActive: true,
+    },
+  });
+
+  // Owner user
+  const ownerPassword = await bcrypt.hash("owner123!", 10);
+  await prisma.user.upsert({
+    where: { username: "owner" },
+    update: {},
+    create: {
+      fullname: "Parking Owner",
+      username: "owner",
+      email: "owner@parking.local",
+      password: ownerPassword,
+      roleId: ownerRole.id,
       isActive: true,
     },
   });

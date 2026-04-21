@@ -33,6 +33,7 @@ enum TransactionStatus {
 
 enum PaymentMethod {
   Qris
+  Cash
 }
 
 enum PaymentStatus {
@@ -55,7 +56,6 @@ model User {
   deletedAt    DateTime? @map("deleted_at")
 
   activityLogs         ActivityLog[]
-  vehicles             Vehicle[]     @relation("VehiclesRegisteredBy")
   attendedTransactions Transaction[] @relation("TransactionsAttendedBy")
   printedReceipts      Receipt[]     @relation("ReceiptsPrintedBy")
   processedRefunds     Refund[]      @relation("RefundsProcessedBy")
@@ -119,29 +119,10 @@ model VehicleType {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  vehicles    Vehicle[]
-  rates       Rate[]
+  rates        Rate[]
+  parkingAreas ParkingArea[]
 
   @@map("vehicle_types")
-}
-
-model Vehicle {
-  id             Int         @id @default(autoincrement())
-  licensePlate   String      @unique @map("license_plate")
-  vehicleTypeId  Int         @map("vehicle_type_id")
-  vehicleType    VehicleType @relation(fields: [vehicleTypeId], references: [id], onDelete: Restrict)
-  color          String
-  ownerName      String      @map("owner_name")
-  registeredById Int         @map("registered_by")
-  registeredBy   User        @relation("VehiclesRegisteredBy", fields: [registeredById], references: [id], onDelete: Restrict)
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
-
-  transactions   Transaction[]
-
-  @@index([vehicleTypeId])
-  @@index([registeredById])
-  @@map("vehicles")
 }
 
 model Rate {
@@ -165,17 +146,20 @@ model Rate {
 }
 
 model ParkingArea {
-  id        Int               @id @default(autoincrement())
-  name      String
-  capacity  Int
+  id            Int               @id @default(autoincrement())
+  name          String
+  vehicleTypeId Int               @map("vehicle_type_id")
+  vehicleType   VehicleType       @relation(fields: [vehicleTypeId], references: [id], onDelete: Restrict)
+  capacity      Int
   // occupied count is computed from open transactions
-  location  String?
-  status    ParkingAreaStatus @default(Open)
-  createdAt DateTime          @default(now()) @map("created_at")
-  updatedAt DateTime          @updatedAt @map("updated_at")
+  location      String?
+  status        ParkingAreaStatus @default(Open)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
 
-  transactions Transaction[]
+  transactions  Transaction[]
 
+  @@index([vehicleTypeId])
   @@map("parking_areas")
 }
 
@@ -183,8 +167,7 @@ model Transaction {
   id              Int               @id @default(autoincrement())
   attendantId     Int?              @map("attendant_id")
   attendant       User?             @relation("TransactionsAttendedBy", fields: [attendantId], references: [id], onDelete: SetNull)
-  vehicleId       Int               @map("vehicle_id")
-  vehicle         Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  tagId           String?           @map("tag_id")
   areaId          Int               @map("area_id")
   parkingArea     ParkingArea       @relation(fields: [areaId], references: [id], onDelete: Restrict)
   rateId          Int?              @map("rate_id")
@@ -201,10 +184,10 @@ model Transaction {
   payment  Payment?
   receipts Receipt[]
 
-  @@index([vehicleId])
   @@index([areaId])
   @@index([attendantId])
   @@index([rateId])
+  @@index([tagId])
   @@map("transactions")
 }
 

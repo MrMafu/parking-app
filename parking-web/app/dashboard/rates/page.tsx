@@ -14,7 +14,7 @@ type FormState = { name: string; vehicleTypeId: string; rateType: Rate["rateType
 const emptyForm: FormState = { name: "", vehicleTypeId: "", rateType: "Hourly", priceCents: "", graceMinutes: "0", validFrom: "", validTo: "" };
 
 function formatCurrency(cents: number) {
-  return `Rp ${(cents / 100).toLocaleString("id-ID")}`;
+  return `Rp ${cents.toLocaleString("id-ID")}`;
 }
 
 function formatDate(iso: string) {

@@ -8,6 +8,8 @@ export type ParkingAreaDetail = {
   occupied: number;
   location: string | null;
   status: ParkingAreaStatus;
+  vehicleTypeId: number;
+  vehicleType: { id: number; name: string };
   createdAt: Date;
   updatedAt: Date;
 };
@@ -18,6 +20,8 @@ const parkingAreaSelect = {
   capacity: true,
   location: true,
   status: true,
+  vehicleTypeId: true,
+  vehicleType: { select: { id: true, name: true } },
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -51,6 +55,7 @@ export async function getParkingAreaById(
 export async function createParkingArea(data: {
   name: string;
   capacity: number;
+  vehicleTypeId: number;
   location?: string | null;
   status?: ParkingAreaStatus;
 }): Promise<ParkingAreaDetail> {
@@ -66,6 +71,7 @@ export async function updateParkingArea(
   data: {
     name?: string;
     capacity?: number;
+    vehicleTypeId?: number;
     location?: string | null;
     status?: ParkingAreaStatus;
   }

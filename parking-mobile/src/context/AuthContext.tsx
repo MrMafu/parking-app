@@ -10,11 +10,13 @@ type PublicUser = {
     id: number;
     name: string;
   };
+  permissions: string[];
 };
 
 type AuthContextValue = {
   user: PublicUser | null;
   loading: boolean;
+  hasPermission: (permission: string) => boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -74,9 +76,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })();
   }, [refreshUser]);
 
+  const hasPermission = useCallback(
+    (permission: string) => user?.permissions?.includes(permission) ?? false,
+    [user]
+  );
+
   const value = useMemo(
-    () => ({ user, loading, login, logout, refreshUser }),
-    [user, loading, login, logout, refreshUser]
+    () => ({ user, loading, hasPermission, login, logout, refreshUser }),
+    [user, loading, hasPermission, login, logout, refreshUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,12 +1,30 @@
 import { Redirect, Route } from "react-router-dom";
 import {
   IonApp,
+  IonIcon,
+  IonLabel,
   IonRouterOutlet,
+  IonTabBar,
+  IonTabButton,
+  IonTabs,
+  setupIonicReact,
 } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
+import {
+  homeOutline,
+  listOutline,
+  personOutline,
+} from "ionicons/icons";
 import LoginPage from "./pages/Login";
 import HomePage from "./pages/Home";
+import TransactionsPage from "./pages/Transactions";
+import AccountPage from "./pages/Account";
+import RfidTestPage from "./pages/RfidTest";
+import RfidEntryPage from "./pages/RfidEntry";
+import RfidExitPage from "./pages/RfidExit";
 import { useAuth } from "./context/AuthContext";
+
+setupIonicReact({ mode: "ios" });
 
 import "@ionic/react/css/core.css";
 import "@ionic/react/css/normalize.css";
@@ -20,6 +38,38 @@ import "@ionic/react/css/flex-utils.css";
 import "@ionic/react/css/display.css";
 import "./theme/variables.css";
 
+function AppTabs() {
+  return (
+    <IonTabs>
+      <IonRouterOutlet>
+        <Route exact path="/home" component={HomePage} />
+        <Route exact path="/transactions" component={TransactionsPage} />
+        <Route exact path="/account" component={AccountPage} />
+        <Route exact path="/" render={() => <Redirect to="/home" />} />
+      </IonRouterOutlet>
+
+      <IonTabBar slot="bottom">
+        <IonTabButton tab="home" href="/home">
+          <IonIcon icon={homeOutline} />
+          <IonLabel>Home</IonLabel>
+        </IonTabButton>
+        <IonTabButton tab="transactions" href="/transactions">
+          <IonIcon icon={listOutline} />
+          <IonLabel>History</IonLabel>
+        </IonTabButton>
+        <IonTabButton tab="account" href="/account">
+          <IonIcon icon={personOutline} />
+          <IonLabel>Account</IonLabel>
+        </IonTabButton>
+      </IonTabBar>
+    </IonTabs>
+  );
+}
+
+const PUBLIC_RFID_PATHS = ["/rfid-test", "/rfid-exit"];
+const isPublicRfidPath = (path: string) =>
+  PUBLIC_RFID_PATHS.includes(path);
+
 function AppRoutes() {
   const { user, loading } = useAuth();
 
@@ -29,13 +79,30 @@ function AppRoutes() {
 
   return (
     <IonRouterOutlet>
-      <Route exact path="/login" component={LoginPage} />
-      <Route exact path="/home" component={HomePage} />
-      <Route
-        exact
-        path="/"
-        render={() => <Redirect to={user ? "/home" : "/login"} />}
-      />
+      {/* Public RFID pages — no auth required */}
+      <Route exact path="/rfid-test" component={RfidTestPage} />
+      <Route exact path="/rfid-exit" component={RfidExitPage} />
+
+      {!user ? (
+        <>
+          <Route exact path="/login" component={LoginPage} />
+          <Route
+            render={({ location }) =>
+              isPublicRfidPath(location.pathname) ? null : (
+                <Redirect to="/login" />
+              )
+            }
+          />
+        </>
+      ) : (
+        <>
+          <Route exact path="/login" render={() => <Redirect to="/home" />} />
+          <Route render={({ location }) => {
+            if (isPublicRfidPath(location.pathname)) return null;
+            return <AppTabs />;
+          }} />
+        </>
+      )}
     </IonRouterOutlet>
   );
 }

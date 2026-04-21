@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useHistory } from "react-router-dom";
 import {
   IonButton,
   IonContent,
@@ -11,31 +10,38 @@ import {
   IonToolbar,
   IonHeader,
   IonLabel,
+  IonSpinner,
+  IonInputPasswordToggle,
 } from "@ionic/react";
 import { useAuth } from "../context/AuthContext";
+import { useIonRouter } from "@ionic/react";
 
 export default function LoginPage() {
-  const history = useHistory();
   const { login } = useAuth();
+  const router = useIonRouter();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleLogin = async () => {
     setError("");
+    setSubmitting(true);
 
     try {
       await login(username, password);
-      history.replace("/home");
+      router.push("/home", "root", "replace");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <IonPage>
-      <IonHeader>
+      <IonHeader className="ion-no-border">
         <IonToolbar>
           <IonTitle>Parking Login</IonTitle>
         </IonToolbar>
@@ -56,7 +62,9 @@ export default function LoginPage() {
             type="password"
             value={password}
             onIonInput={(e) => setPassword(e.detail.value ?? "")}
-          />
+          >
+            <IonInputPasswordToggle slot="end" />
+          </IonInput>
         </IonItem>
 
         {error && (
@@ -65,8 +73,8 @@ export default function LoginPage() {
           </IonText>
         )}
 
-        <IonButton expand="block" onClick={handleLogin} className="ion-margin-top">
-          Login
+        <IonButton expand="block" onClick={handleLogin} className="ion-margin-top" disabled={submitting}>
+          {submitting ? <IonSpinner name="crescent" /> : "Login"}
         </IonButton>
       </IonContent>
     </IonPage>
