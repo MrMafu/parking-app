@@ -12,6 +12,7 @@ app.use(
     origin: [
       "http://localhost:3001", // web localhost
       "http://localhost:8100", // mobile localhost
+      "https://parking-backend-mafu.vercel.app", // backend vercel
     ],
     credentials: true,
   })
