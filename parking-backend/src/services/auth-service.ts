@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
-import { prisma } from "../lib/prisma";
-import { signAccessToken } from "../lib/jwt";
-import { logActivity } from "../lib/activity-log";
-import type { PublicUser } from "../types/auth";
+import { prisma } from "../lib/prisma.js";
+import { signAccessToken } from "../lib/jwt.js";
+import { logActivity } from "../lib/activity-log.js";
+import type { PublicUser } from "../types/auth.js";
 
 export async function loginUser(
   username: string,

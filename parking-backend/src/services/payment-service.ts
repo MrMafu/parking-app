@@ -1,5 +1,5 @@
-import { prisma } from "../lib/prisma";
-import type { PaymentMethod, PaymentStatus } from "../../generated/prisma/enums";
+import { prisma } from "../lib/prisma.js";
+import type { PaymentMethod, PaymentStatus } from "../../generated/prisma/enums.js";
 import {
   createQrisCharge,
   getTransactionStatus,

@@ -1,5 +1,5 @@
-import { prisma } from "../lib/prisma";
-import type { RateType } from "../../generated/prisma/enums";
+import { prisma } from "../lib/prisma.js";
+import type { RateType } from "../../generated/prisma/enums.js";
 
 export type RateDetail = {
   id: number;
