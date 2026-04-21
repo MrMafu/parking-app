@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import { setCookie, deleteCookie } from "hono/cookie";
-import { loginSchema } from "../validators/auth-schema";
-import { loginUser, getPublicUserById } from "../services/auth-service";
-import { requireAuth } from "../middlewares/auth";
-import { logActivity } from "../lib/activity-log";
-import type { AuthEnv } from "../types/auth";
+import { loginSchema } from "../validators/auth-schema.js";
+import { loginUser, getPublicUserById } from "../services/auth-service.js";
+import { requireAuth } from "../middlewares/auth.js";
+import { logActivity } from "../lib/activity-log.js";
+import type { AuthEnv } from "../types/auth.js";
 
 const auth = new Hono<AuthEnv>();
 
