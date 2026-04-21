@@ -10,6 +10,8 @@ app.use(
   "*",
   cors({
     origin: [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
       "http://localhost:3001", // web localhost
       "http://localhost:8100", // mobile localhost
       "https://parking-backend-mafu.vercel.app", // backend vercel
