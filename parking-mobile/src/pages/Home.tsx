@@ -395,18 +395,6 @@ export default function HomePage() {
                         {area.location ? ` • ${area.location}` : ""}
                       </p>
                     </IonText>
-                    {area.status === "Open" && area.occupied < area.capacity && (
-                      <IonButton
-                        expand="block"
-                        size="small"
-                        color="success"
-                        onClick={() => router.push(`/rfid-entry/${area.id}`, "forward")}
-                        style={{ marginTop: 8 }}
-                      >
-                        <IonIcon icon={logInOutline} slot="start" />
-                        RFID Entry
-                      </IonButton>
-                    )}
                   </IonCardContent>
                 </IonCard>
               );
