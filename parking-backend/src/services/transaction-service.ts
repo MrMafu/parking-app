@@ -1,6 +1,6 @@
-import { prisma } from "../lib/prisma";
-import { Prisma } from "../../generated/prisma/client";
-import type { TransactionStatus } from "../../generated/prisma/enums";
+import { prisma } from "../lib/prisma.js";
+import { Prisma } from "../../generated/prisma/client.js";
+import type { TransactionStatus } from "../../generated/prisma/enums.js";
 
 export type TransactionDetail = {
   id: number;

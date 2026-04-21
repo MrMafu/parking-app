@@ -1,6 +1,5 @@
 import bcrypt from "bcryptjs";
-import { prisma } from "../lib/prisma";
-import type { PublicUser } from "../types/auth";
+import { prisma } from "../lib/prisma.js";
 
 const userSelect = {
   id: true,
