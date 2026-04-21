@@ -11,7 +11,7 @@ const auth = new Hono<AuthEnv>();
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
-  sameSite: "Lax" as const,
+  sameSite: (process.env.NODE_ENV === "production" ? "None" : "Lax") as "None" | "Lax",
   path: "/",
   maxAge: 3600, // 1 hour
 };
