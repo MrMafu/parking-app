@@ -228,25 +228,9 @@ export default function HomePage() {
           />
         )}
 
-        {/* Attendant view: parking areas + RFID quick links */}
+        {/* Attendant view: parking areas */}
         {isAttendant && (
           <>
-            {/* RFID Quick Actions */}
-            <IonGrid className="ion-padding-horizontal">
-              <IonRow>
-                <IonCol>
-                  <IonButton
-                    expand="block"
-                    color="warning"
-                    onClick={() => router.push("/rfid-exit", "forward")}
-                  >
-                    <IonIcon icon={logOutOutline} slot="start" />
-                    RFID Exit
-                  </IonButton>
-                </IonCol>
-              </IonRow>
-            </IonGrid>
-
             {/* Pending entry requests (attendant) */}
             <div className="ion-padding-horizontal">
               <h6 style={{ marginTop: 8 }}>Pending Entry Requests</h6>
