@@ -277,6 +277,28 @@ export default function RfidExitPage() {
     }
   };
 
+  const handleCloseNoPayment = async () => {
+    if (!txn) return;
+    setProcessing(true);
+    setError("");
+
+    try {
+      const res = await apiFetch(`/transactions/${txn.id}/close`, {
+        method: "POST",
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setTxn(json.data);
+      } else {
+        setError(json.message || "Failed to close transaction");
+      }
+    } catch {
+      setError("Failed to close transaction");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleSimulatePayment = async () => {
     if (!paymentId) return;
     setProcessing(true);
@@ -651,8 +673,8 @@ export default function RfidExitPage() {
               )}
 
               {/* Show payment button only if QR not yet displayed */}
-              {!qrImageUrl &&
-                (!txn.payment || txn.payment.status !== "Completed") && (
+              {!qrImageUrl && (!txn.payment || txn.payment.status !== "Completed") && (
+                ((txn?.amountCents ?? 0) > 0) ? (
                   <IonButton
                     expand="block"
                     color="success"
@@ -666,7 +688,22 @@ export default function RfidExitPage() {
                       "Generate QRIS Payment"
                     )}
                   </IonButton>
-                )}
+                ) : (
+                  <IonButton
+                    expand="block"
+                    color="medium"
+                    onClick={handleCloseNoPayment}
+                    disabled={processing}
+                    className="ion-margin-top"
+                  >
+                    {processing ? (
+                      <IonSpinner name="crescent" />
+                    ) : (
+                      "Complete transaction (no payment required)"
+                    )}
+                  </IonButton>
+                )
+              )}
 
               {txn.payment?.status === "Completed" && (
                 <IonButton

@@ -11,6 +11,7 @@ import {
   getTransactionByTagId,
   rfidEntry,
   rfidExit,
+  closeTransaction,
   cancelTransaction,
 } from "../services/transaction-service";
 import { logActivity } from "../lib/activity-log";
@@ -34,6 +35,37 @@ transactions.get(
     }
     const data = await listTransactions(parsed.data);
     return c.json({ message: "Transactions retrieved", data });
+  }
+);
+
+// POST /transactions/:id/close — force-close a transaction (no payment)
+transactions.post(
+  "/:id/close",
+  requireAuth,
+  requirePermission("transactions.update"),
+  async (c) => {
+    const id = Number(c.req.param("id"));
+    if (isNaN(id)) return c.json({ message: "Invalid ID" }, 400);
+
+    try {
+      const authUser = c.get("authUser");
+      const txn = await closeTransaction(id);
+      await logActivity(
+        Number(authUser.userId),
+        "transactions.close",
+        `Closed transaction #${id} (no payment)`
+      );
+      return c.json({ message: "Transaction closed", data: txn });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "";
+      if (msg.includes("not found") || msg.includes("Transaction not found")) {
+        return c.json({ message: msg }, 404);
+      }
+      if (msg.includes("already closed")) {
+        return c.json({ message: msg }, 400);
+      }
+      throw error;
+    }
   }
 );
 
@@ -176,7 +208,10 @@ transactions.post(
         "transactions.rfid-exit",
         `RFID exit: transaction #${txn.id}, tag ${parsed.data.tagId}, amount: ${txn.amountCents} cents, duration: ${txn.durationMinutes} min`
       );
-      return c.json({ message: "RFID exit processed, awaiting payment", data: txn });
+      const msg = txn.status === "AwaitingPayment"
+        ? "RFID exit processed, awaiting payment"
+        : "RFID exit processed, closed (no payment required)";
+      return c.json({ message: msg, data: txn });
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : "";
       if (msg.includes("No open transaction")) {

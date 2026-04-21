@@ -233,6 +233,9 @@ export async function rfidExit(data: {
       durationMinutes
     );
 
+    // If amount is zero (e.g., within grace period), close the transaction immediately
+    const newStatus: TransactionStatus = amountCents && amountCents > 0 ? "AwaitingPayment" : "Closed";
+
     return tx.transaction.update({
       where: { id: txn.id },
       data: {
@@ -241,9 +244,24 @@ export async function rfidExit(data: {
         amountCents,
         rateId: rate?.id ?? null,
         rateSnapshot: rateSnapshot ?? Prisma.DbNull,
-        status: "AwaitingPayment",
+        status: newStatus,
       },
       select: transactionSelect,
     });
+  });
+}
+
+/**
+ * Close a transaction manually (used for zero-amount/grace-period flows).
+ */
+export async function closeTransaction(id: number): Promise<TransactionDetail> {
+  const txn = await prisma.transaction.findUnique({ where: { id }, select: { status: true } });
+  if (!txn) throw new Error("Transaction not found");
+  if (txn.status === "Closed") throw new Error("Transaction is already closed");
+
+  return prisma.transaction.update({
+    where: { id },
+    data: { status: "Closed" },
+    select: transactionSelect,
   });
 }
