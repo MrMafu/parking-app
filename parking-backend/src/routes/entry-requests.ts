@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { requireAuth, requirePermission } from "../middlewares/auth";
-import { rfidEntrySchema } from "../validators/transaction-schema";
-import { rfidEntry } from "../services/transaction-service";
-import { logActivity } from "../lib/activity-log";
-import type { AuthEnv } from "../types/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth.js";
+import { rfidEntrySchema } from "../validators/transaction-schema.js";
+import { rfidEntry } from "../services/transaction-service.js";
+import { logActivity } from "../lib/activity-log.js";
+import type { AuthEnv } from "../types/auth.js";
 
 // In-memory pending entry requests. This is intentionally simple so we avoid
 // requiring a DB migration. Good for prototyping — replace with a persistent

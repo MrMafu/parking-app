@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { requireAuth, requirePermission } from "../middlewares/auth";
-import { listActivityLogs } from "../services/activity-log-service";
-import type { AuthEnv } from "../types/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth.js";
+import { listActivityLogs } from "../services/activity-log-service.js";
+import type { AuthEnv } from "../types/auth.js";
 
 const activityLogs = new Hono<AuthEnv>();
 

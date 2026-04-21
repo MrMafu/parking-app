@@ -1,8 +1,8 @@
 import type { Context, Next } from "hono";
 import { getCookie } from "hono/cookie";
-import { verifyAccessToken } from "../lib/jwt";
-import type { AuthEnv } from "../types/auth";
-import { prisma } from "../lib/prisma";
+import { verifyAccessToken } from "../lib/jwt.js";
+import type { AuthEnv } from "../types/auth.js";
+import { prisma } from "../lib/prisma.js";
 
 export function requirePermission(permission: string) {
   return async (c: Context<AuthEnv>, next: Next) => {

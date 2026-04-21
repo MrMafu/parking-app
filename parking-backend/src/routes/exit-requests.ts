@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { requireAuth, requirePermission } from "../middlewares/auth";
-import { rfidExitSchema } from "../validators/transaction-schema";
-import { rfidExit } from "../services/transaction-service";
-import { logActivity } from "../lib/activity-log";
-import type { AuthEnv } from "../types/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth.js";
+import { rfidExitSchema } from "../validators/transaction-schema.js";
+import { rfidExit } from "../services/transaction-service.js";
+import { logActivity } from "../lib/activity-log.js";
+import type { AuthEnv } from "../types/auth.js";
 
 type ExitRequest = {
   id: number;
