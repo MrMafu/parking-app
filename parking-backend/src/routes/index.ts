@@ -1,18 +1,18 @@
 import { Hono } from "hono";
-import auth from "./auth";
-import users from "./users";
-import vehicleTypes from "./vehicle-types";
-import rates from "./rates";
-import parkingAreas from "./parking-areas";
-import activityLogs from "./activity-logs";
-import roles from "./roles";
-import transactions from "./transactions";
-import payments from "./payments";
-import receipts from "./receipts";
-import refunds from "./refunds";
-import reports from "./reports";
-import entryRequests from "./entry-requests";
-import exitRequests from "./exit-requests";
+import auth from "./auth.js";
+import users from "./users.js";
+import vehicleTypes from "./vehicle-types.js";
+import rates from "./rates.js";
+import parkingAreas from "./parking-areas.js";
+import activityLogs from "./activity-logs.js";
+import roles from "./roles.js";
+import transactions from "./transactions.js";
+import payments from "./payments.js";
+import receipts from "./receipts.js";
+import refunds from "./refunds.js";
+import reports from "./reports.js";
+import entryRequests from "./entry-requests.js";
+import exitRequests from "./exit-requests.js";
 
 const router = new Hono();
 
