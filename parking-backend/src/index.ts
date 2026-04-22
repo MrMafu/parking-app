@@ -10,6 +10,8 @@ app.use(
   "*",
   cors({
     origin: [
+      "capacitor://localhost",
+      "http://localhost",
       "http://localhost:3000",
       "http://127.0.0.1:3000",
       "http://localhost:3001", // web localhost
