@@ -75,12 +75,17 @@ export async function getTransactionById(
  * Find an open or awaiting-payment transaction by RFID tag ID.
  */
 export async function getTransactionByTagId(
-  tagId: string
+  tagId: string,
+  includeClosed: boolean = false
 ): Promise<TransactionDetail | null> {
+  const allowedStatuses: TransactionStatus[] = includeClosed
+    ? ["Open", "AwaitingPayment", "Closed"]
+    : ["Open", "AwaitingPayment"];
+
   return prisma.transaction.findFirst({
     where: {
       tagId,
-      status: { in: ["Open", "AwaitingPayment"] },
+      status: { in: allowedStatuses },
     },
     select: transactionSelect,
     orderBy: { id: "desc" },
@@ -234,7 +239,7 @@ export async function rfidExit(data: {
     );
 
     // If amount is zero (e.g., within grace period), close the transaction immediately
-    const newStatus: TransactionStatus = amountCents && amountCents > 0 ? "AwaitingPayment" : "Closed";
+    const newStatus: TransactionStatus = "AwaitingPayment";
 
     return tx.transaction.update({
       where: { id: txn.id },

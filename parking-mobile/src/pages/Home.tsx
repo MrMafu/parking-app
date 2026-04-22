@@ -237,7 +237,13 @@ export default function HomePage() {
             if (isOwner) {
               await ownerRefreshRef.current?.();
             } else {
-              await fetchAreas();
+              await Promise.all([
+                fetchAreas(),
+                fetchEntryRequests(),
+                fetchExitRequests(),
+                fetchAwaitingPayments(),
+                fetchOccupancySeries(),
+              ])
             }
             e.detail.complete();
           }}
@@ -265,7 +271,7 @@ export default function HomePage() {
             <div className="ion-padding-horizontal">
               <h6 style={{ marginTop: 8 }}>Pending Entry Requests</h6>
               {requestsLoading ? (
-                <div style={{ padding: 8 }}><IonSpinner /></div>
+                <div style={{ padding: 8 }}><IonSpinner name="dots" /></div>
               ) : entryRequests.length === 0 ? (
                 <div style={{ padding: 8 }}><IonText color="medium">No pending requests</IonText></div>
               ) : (
@@ -292,7 +298,7 @@ export default function HomePage() {
             <div className="ion-padding-horizontal">
               <h6 style={{ marginTop: 8 }}>Pending Exit Requests</h6>
               {exitRequestsLoading ? (
-                <div style={{ padding: 8 }}><IonSpinner /></div>
+                <div style={{ padding: 8 }}><IonSpinner name="dots" /></div>
               ) : exitRequests.length === 0 ? (
                 <div style={{ padding: 8 }}><IonText color="medium">No pending exit requests</IonText></div>
               ) : (
@@ -319,7 +325,7 @@ export default function HomePage() {
             <div className="ion-padding-horizontal">
               <h6 style={{ marginTop: 8 }}>Awaiting Payments</h6>
               {awaitingPaymentsLoading ? (
-                <div style={{ padding: 8 }}><IonSpinner /></div>
+                <div style={{ padding: 8 }}><IonSpinner name="dots" /></div>
               ) : awaitingPayments.length === 0 ? (
                 <div style={{ padding: 8 }}><IonText color="medium">No awaiting payments</IonText></div>
               ) : (
@@ -343,7 +349,7 @@ export default function HomePage() {
 
             {loading ? (
               <div className="ion-text-center ion-padding">
-                <IonSpinner />
+                <IonSpinner name="dots" />
               </div>
             ) : (
               <>

@@ -18,6 +18,7 @@ import {
   IonTitle,
   IonToolbar,
   IonBadge,
+  useIonRouter,
 } from "@ionic/react";
 import { apiFetch } from "../lib/api";
 import { useRfidReader } from "../hooks/useRfidReader";
@@ -79,7 +80,9 @@ export default function RfidExitPage() {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [completed, setCompleted] = useState(false);
   const [error, setError] = useState("");
+  const redirectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // QRIS payment state
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
@@ -88,9 +91,22 @@ export default function RfidExitPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const router = useIonRouter();
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (redirectTimeout.current) clearTimeout(redirectTimeout.current);
+    };
+  }, []);
+
   // Auto-lookup transaction when tag is scanned
   useEffect(() => {
     if (!tagId) return;
+
+    if (txn && txn.tagId === tagId) {
+      return;
+    }
 
     const lookup = async () => {
       setLoading(true);
@@ -116,7 +132,7 @@ export default function RfidExitPage() {
     };
 
     lookup();
-  }, [tagId]);
+  }, [tagId, txn]);
 
   // Support loading via query params: ?txnId=123 or ?tag=TAGID
   const location = useLocation();
@@ -193,6 +209,10 @@ export default function RfidExitPage() {
             if (tRes.ok) {
               const tJson = await tRes.json();
               setTxn(tJson.data);
+              setCompleted(true);
+              redirectTimeout.current = setTimeout(() => {
+                router.push("/home", "root");
+              }, 2000);
             }
           } else if (paymentStatus === "Failed") {
             stopPolling();
@@ -289,6 +309,10 @@ export default function RfidExitPage() {
       const json = await res.json();
       if (res.ok) {
         setTxn(json.data);
+        setCompleted(true);
+        redirectTimeout.current = setTimeout(() => {
+          router.push("/home", "root");
+        }, 2000);
       } else {
         setError(json.message || "Failed to close transaction");
       }
@@ -317,6 +341,10 @@ export default function RfidExitPage() {
         if (tRes.ok) {
           const tJson = await tRes.json();
           setTxn(tJson.data);
+          setCompleted(true);
+          redirectTimeout.current = setTimeout(() => {
+            router.push("/home", "root");
+          }, 2000);
         }
       } else {
         setError(json.message || "Simulation failed");
@@ -854,16 +882,16 @@ export default function RfidExitPage() {
           </IonCard>
         )}
 
-        {/* Reset / New scan */}
-        {(txn || receipt || error) && (
-          <IonButton
-            expand="block"
-            fill="outline"
-            onClick={handleReset}
-            className="ion-margin-top"
-          >
-            Scan Next Vehicle
-          </IonButton>
+        {completed && (
+          <IonCard style={{ textAlign: "center" }}>
+            <IonCardContent>
+              <IonText color="success">
+                <h2 style={{ margin: 0 }}>✅ Transaction completed!</h2>
+                <p>Redirecting to dashboard...</p>
+                <IonSpinner name="crescent" />
+              </IonText>
+            </IonCardContent>
+          </IonCard>
         )}
       </IonContent>
     </IonPage>
