@@ -77,11 +77,12 @@ transactions.get(
   requirePermission("transactions.view"),
   async (c) => {
     const tagId = c.req.param("tagId");
+    const includeClosed = c.req.query("includeClosed") === "true";
     if (!tagId || tagId.length < 4) {
       return c.json({ message: "Invalid tag ID" }, 400);
     }
 
-    const txn = await getTransactionByTagId(tagId);
+    const txn = await getTransactionByTagId(tagId, includeClosed);
     if (!txn) {
       return c.json({ message: "No active transaction found for this tag" }, 404);
     }

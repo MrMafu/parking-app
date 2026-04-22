@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { apiFetch } from "@/lib/api";
 import { useRfidReader } from "@/hooks/useRfidReader";
@@ -26,6 +26,13 @@ export default function GateEntryPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [error, setError] = useState("");
 
+  // New states for waiting approval
+  const [waitingForApproval, setWaitingForApproval] = useState(false);
+  const [approved, setApproved] = useState(false);
+  const [rejected, setRejected] = useState(false);
+  const [requestId, setRequestId] = useState<number | null>(null);
+  const pollInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const fetchArea = useCallback(async () => {
     if (isNaN(areaId)) return;
     try {
@@ -45,11 +52,30 @@ export default function GateEntryPage() {
     fetchArea();
   }, [fetchArea]);
 
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollInterval.current) clearInterval(pollInterval.current);
+    };
+  }, []);
+
+  const stopPolling = () => {
+    if (pollInterval.current) {
+      clearInterval(pollInterval.current);
+      pollInterval.current = null;
+    }
+  };
+
   const handleNewScan = () => {
     resetReader();
     setSuccessMsg("");
     setError("");
     setManualInput("");
+    setWaitingForApproval(false);
+    setApproved(false);
+    setRejected(false);
+    setRequestId(null);
+    stopPolling();
   };
 
   const handleManualSubmit = () => {
@@ -63,6 +89,7 @@ export default function GateEntryPage() {
     if (!tagId || isNaN(areaId)) return;
     setError("");
     setSuccessMsg("");
+    setWaitingForApproval(true);
     try {
       const res = await apiFetch(`/entry-requests`, {
         method: "POST",
@@ -70,19 +97,50 @@ export default function GateEntryPage() {
       });
       const json = await res.json();
       if (res.ok) {
-        setSuccessMsg(`Request sent — awaiting attendant approval (req #${json.data.id})`);
-        resetReader();
+        const reqId = json.data.id;
+        setRequestId(reqId);
+        setSuccessMsg(`Request sent — awaiting attendant approval (req #${reqId})`);
+        // Start polling for request status
+        pollInterval.current = setInterval(async () => {
+          // Check if request still exists
+          const checkRes = await apiFetch(`/entry-requests/${reqId}`);
+          if (!checkRes.ok && checkRes.status === 404) {
+            // Request deleted – either approved or rejected
+            stopPolling();
+            // Check if an open transaction exists for this tag
+            const txnRes = await apiFetch(`/transactions/by-tag/${encodeURIComponent(tagId)}`);
+            if (txnRes.ok) {
+              const txnJson = await txnRes.json();
+              if (txnJson.data && txnJson.data.status === "Open") {
+                setApproved(true);
+                setSuccessMsg("✅ Entry approved! You may now enter.");
+                // Reset reader after 3 seconds
+                setTimeout(() => handleNewScan(), 3000);
+              } else {
+                setRejected(true);
+                setError("❌ Entry request rejected.");
+                setTimeout(() => handleNewScan(), 3000);
+              }
+            } else {
+              setRejected(true);
+              setError("❌ Entry request rejected (no active transaction).");
+              setTimeout(() => handleNewScan(), 3000);
+            }
+          }
+        }, 2000);
       } else {
         setError(json.message || "Failed to create request");
+        setWaitingForApproval(false);
       }
     } catch {
       setError("Network error");
+      setWaitingForApproval(false);
     }
   };
 
   // When a tag is scanned, immediately create an entry request.
   useEffect(() => {
-    if (tagId && !successMsg) {
+    if (tagId && !waitingForApproval && !successMsg && !approved && !rejected) {
       handleRequest();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,26 +186,42 @@ export default function GateEntryPage() {
         </div>
       </header>
 
-      {/* Main content */}
       <main className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-lg space-y-6">
 
-          {/* Success message */}
-          {successMsg && (
+          {/* Success message after approval */}
+          {approved && (
             <div className="bg-green-50 border-2 border-green-400 rounded-2xl p-6 text-center">
               <p className="text-4xl mb-3">✅</p>
-              <p className="text-lg font-bold text-green-700">{successMsg}</p>
+              <p className="text-lg font-bold text-green-700">Entry approved! You may now enter.</p>
+            </div>
+          )}
+
+          {/* Rejected message */}
+          {rejected && (
+            <div className="bg-red-50 border-2 border-red-400 rounded-2xl p-6 text-center">
+              <p className="text-4xl mb-3">❌</p>
+              <p className="text-lg font-bold text-red-700">Entry request rejected.</p>
+            </div>
+          )}
+
+          {/* Waiting for approval */}
+          {waitingForApproval && !approved && !rejected && (
+            <div className="bg-yellow-50 border-2 border-yellow-400 rounded-2xl p-6 text-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-yellow-600 mx-auto mb-3" />
+              <p className="text-lg font-semibold text-yellow-800">Waiting for attendant approval...</p>
+              <p className="text-sm text-yellow-700 mt-1">{successMsg}</p>
               <button
                 onClick={handleNewScan}
-                className="mt-4 bg-green-600 text-white px-6 py-3 rounded-xl font-semibold text-lg hover:bg-green-700 transition-colors"
+                className="mt-4 bg-yellow-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-yellow-700 transition-colors"
               >
-                Scan Next Vehicle
+                Cancel & Scan Another
               </button>
             </div>
           )}
 
-          {/* Scanner card */}
-          {!successMsg && (
+          {/* Initial scanner UI (only when not waiting and not approved/rejected) */}
+          {!waitingForApproval && !approved && !rejected && (
             <>
               <div
                 className={`bg-white rounded-2xl shadow-lg p-6 border-2 transition-colors ${
@@ -183,7 +257,6 @@ export default function GateEntryPage() {
                   Total scans this session: {scanCount}
                 </p>
 
-                {/* Manual input fallback */}
                 {!tagId && (
                   <div className="mt-4 flex gap-2">
                     <input
@@ -205,14 +278,13 @@ export default function GateEntryPage() {
                 )}
               </div>
 
-              {/* Error */}
               {error && (
                 <div className="bg-red-50 border-2 border-red-400 rounded-2xl p-4 text-center">
                   <p className="text-red-700 font-semibold">{error}</p>
                 </div>
               )}
 
-              {tagId && !successMsg && (
+              {tagId && (
                 <div className="space-y-3">
                   <button
                     onClick={handleNewScan}

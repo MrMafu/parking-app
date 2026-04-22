@@ -26,6 +26,14 @@ exitRequests.get("/", requireAuth, requirePermission("transactions.view"), async
   return c.json({ message: "Exit requests retrieved", data: rows });
 });
 
+exitRequests.get("/:id", requireAuth, requirePermission("transactions.view"), async (c) => {
+  const id = Number(c.req.param("id"));
+  if (isNaN(id)) return c.json({ message: "Invalid ID" }, 400);
+  const req = await prisma.exitRequest.findUnique({ where: { id } });
+  if (!req) return c.json({ message: "Request not found" }, 404);
+  return c.json({ data: req });
+});
+
 // POST /exit-requests/:id/approve  (authenticated)
 exitRequests.post(
   "/:id/approve",
