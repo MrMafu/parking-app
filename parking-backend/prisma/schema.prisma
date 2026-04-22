@@ -185,10 +185,10 @@ model Transaction {
   payment  Payment?
   receipts Receipt[]
 
-  @@index([areaId])
+  @@index([areaId, status])
   @@index([attendantId])
   @@index([rateId])
-  @@index([tagId])
+  @@index([tagId, status])
   @@map("transactions")
 }
 
