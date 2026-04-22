@@ -192,6 +192,25 @@ model Transaction {
   @@map("transactions")
 }
 
+// Persistent request queues to replace in-memory stores (required for serverless)
+model EntryRequest {
+  id        Int      @id @default(autoincrement())
+  tagId     String   @map("tag_id")
+  areaId    Int      @map("area_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([areaId])
+  @@map("entry_requests")
+}
+
+model ExitRequest {
+  id        Int      @id @default(autoincrement())
+  tagId     String   @map("tag_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("exit_requests")
+}
+
 model Payment {
   id                Int           @id @default(autoincrement())
   transactionId     Int           @unique @map("transaction_id")
