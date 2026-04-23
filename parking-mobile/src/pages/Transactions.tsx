@@ -35,7 +35,7 @@ type Transaction = {
   } | null;
 };
 
-const STATUS_FILTERS = ["All", "Open", "AwaitingPayment", "Closed", "Cancelled"] as const;
+const STATUS_FILTERS = ["All", "Open", "AwaitingPayment", "Closed"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 function statusColor(status: string) {
@@ -183,7 +183,7 @@ export default function TransactionsPage() {
                         </p>
                       )}
                     </IonText>
-                    {(txn.status === "AwaitingPayment" || txn.status === "Open") && (
+                    {txn.status === "AwaitingPayment" && (
                       <div style={{ marginTop: 8 }}>
                         <button
                           onClick={() => router.push(`/rfid-exit?txnId=${txn.id}`, "forward")}

@@ -65,23 +65,4 @@ exitRequests.post(
   }
 );
 
-// POST /exit-requests/:id/reject  (authenticated)
-exitRequests.post(
-  "/:id/reject",
-  requireAuth,
-  requirePermission("transactions.update"),
-  async (c) => {
-    const id = Number(c.req.param("id"));
-    if (isNaN(id)) return c.json({ message: "Invalid ID" }, 400);
-
-    const req = await prisma.exitRequest.findUnique({ where: { id } });
-    if (!req) return c.json({ message: "Exit request not found" }, 404);
-
-    const authUser = c.get("authUser");
-    await prisma.exitRequest.delete({ where: { id } });
-    await logActivity(Number(authUser.userId), "transactions.rfid-exit.reject", `Rejected exit request #${id} (tag: ${req.tagId})`);
-    return c.json({ message: "Exit request rejected" });
-  }
-);
-
 export default exitRequests;

@@ -8,7 +8,6 @@ import {
   IonCardTitle,
   IonContent,
   IonHeader,
-  IonInput,
   IonItem,
   IonLabel,
   IonList,
@@ -21,7 +20,6 @@ import {
   useIonRouter,
 } from "@ionic/react";
 import { apiFetch } from "../lib/api";
-import { useRfidReader } from "../hooks/useRfidReader";
 
 type Transaction = {
   id: number;
@@ -73,106 +71,51 @@ function formatDuration(minutes: number): string {
 }
 
 export default function RfidExitPage() {
-  const { tagId, isReading, reset: resetReader, setManualTagId } = useRfidReader();
-  const [manualInput, setManualInput] = useState("");
-
   const [txn, setTxn] = useState<Transaction | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [error, setError] = useState("");
-  const redirectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // QRIS payment state
   const [qrImageUrl, setQrImageUrl] = useState<string | null>(null);
   const [paymentId, setPaymentId] = useState<number | null>(null);
-  const [qrExpiry, setQrExpiry] = useState<number>(0); // seconds remaining
+  const [qrExpiry, setQrExpiry] = useState<number>(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const router = useIonRouter();
+  const location = useLocation();
 
-  // Cleanup timeout on unmount
+  // Load transaction from ?txnId= query param
   useEffect(() => {
-    return () => {
-      if (redirectTimeout.current) clearTimeout(redirectTimeout.current);
-    };
-  }, []);
-
-  // Auto-lookup transaction when tag is scanned
-  useEffect(() => {
-    if (!tagId) return;
-
-    if (txn && txn.tagId === tagId) {
+    const params = new URLSearchParams(location.search);
+    const txnId = params.get("txnId");
+    if (!txnId) {
+      setError("No transaction ID provided");
       return;
     }
 
-    const lookup = async () => {
+    const loadTxn = async () => {
       setLoading(true);
       setError("");
-      setTxn(null);
-      setReceipt(null);
-
       try {
-        const res = await apiFetch(
-          `/transactions/by-tag/${encodeURIComponent(tagId)}`
-        );
+        const res = await apiFetch(`/transactions/${encodeURIComponent(txnId)}`);
         const json = await res.json();
         if (res.ok) {
           setTxn(json.data);
         } else {
-          setError(json.message || "No active transaction found for this tag");
+          setError(json.message || "Transaction not found");
         }
       } catch {
-        setError("Failed to look up transaction");
+        setError("Failed to load transaction");
       } finally {
         setLoading(false);
       }
     };
-
-    lookup();
-  }, [tagId, txn]);
-
-  // Support loading via query params: ?txnId=123 or ?tag=TAGID
-  const location = useLocation();
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const txnId = params.get("txnId");
-    const tag = params.get("tag");
-    if (tag) {
-      // set manual tag so UI shows it and lookup triggers
-      setManualTagId(tag);
-      return;
-    }
-    if (txnId) {
-      const loadTxn = async () => {
-        setLoading(true);
-        setError("");
-        try {
-          const res = await apiFetch(`/transactions/${encodeURIComponent(txnId)}`);
-          const json = await res.json();
-          if (res.ok) {
-            setTxn(json.data);
-            if (json.data?.tagId) setManualTagId(json.data.tagId);
-          } else {
-            setError(json.message || "Transaction not found");
-          }
-        } catch {
-          setError("Failed to load transaction");
-        } finally {
-          setLoading(false);
-        }
-      };
-      loadTxn();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadTxn();
   }, [location.search]);
-
-  const liveDuration =
-    txn && txn.status === "Open"
-      ? Math.round((Date.now() - new Date(txn.entryTime).getTime()) / 60000)
-      : null;
 
   // Cleanup polling and timer on unmount
   useEffect(() => {
@@ -183,18 +126,13 @@ export default function RfidExitPage() {
   }, []);
 
   const stopPolling = () => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    if (pollRef.current) clearInterval(pollRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
+    pollRef.current = null;
+    timerRef.current = null;
   };
 
   const startPolling = (pId: number) => {
-    // Poll payment status every 3 seconds
     pollRef.current = setInterval(async () => {
       try {
         const res = await apiFetch(`/payments/${pId}/status`);
@@ -204,15 +142,11 @@ export default function RfidExitPage() {
           if (paymentStatus === "Completed") {
             stopPolling();
             setQrImageUrl(null);
-            // Refresh transaction to get updated state
             const tRes = await apiFetch(`/transactions/${txn?.id}`);
             if (tRes.ok) {
               const tJson = await tRes.json();
               setTxn(tJson.data);
               setCompleted(true);
-              redirectTimeout.current = setTimeout(() => {
-                router.push("/home", "root");
-              }, 2000);
             }
           } else if (paymentStatus === "Failed") {
             stopPolling();
@@ -222,11 +156,10 @@ export default function RfidExitPage() {
           }
         }
       } catch {
-        // Ignore polling errors
+        // ignore
       }
     }, 3000);
 
-    // Countdown timer (5 minutes = 300 seconds)
     setQrExpiry(300);
     timerRef.current = setInterval(() => {
       setQrExpiry((prev) => {
@@ -243,14 +176,14 @@ export default function RfidExitPage() {
   };
 
   const handleExit = async () => {
-    if (!tagId) return;
+    if (!txn || !txn.tagId) return;
     setProcessing(true);
     setError("");
 
     try {
       const res = await apiFetch("/transactions/rfid-exit", {
         method: "POST",
-        body: JSON.stringify({ tagId }),
+        body: JSON.stringify({ tagId: txn.tagId }),
       });
       const json = await res.json();
       if (res.ok) {
@@ -271,7 +204,6 @@ export default function RfidExitPage() {
     setError("");
 
     try {
-      // Create payment — backend creates Midtrans QRIS charge
       const pRes = await apiFetch("/payments", {
         method: "POST",
         body: JSON.stringify({
@@ -286,7 +218,6 @@ export default function RfidExitPage() {
         return;
       }
 
-      // Show QR code and start polling
       setPaymentId(pJson.data.id);
       setQrImageUrl(pJson.qrImageUrl || "SIMULATE");
       startPolling(pJson.data.id);
@@ -310,9 +241,6 @@ export default function RfidExitPage() {
       if (res.ok) {
         setTxn(json.data);
         setCompleted(true);
-        redirectTimeout.current = setTimeout(() => {
-          router.push("/home", "root");
-        }, 2000);
       } else {
         setError(json.message || "Failed to close transaction");
       }
@@ -336,15 +264,11 @@ export default function RfidExitPage() {
       if (res.ok) {
         stopPolling();
         setQrImageUrl(null);
-        // Refresh transaction
         const tRes = await apiFetch(`/transactions/${txn?.id}`);
         if (tRes.ok) {
           const tJson = await tRes.json();
           setTxn(tJson.data);
           setCompleted(true);
-          redirectTimeout.current = setTimeout(() => {
-            router.push("/home", "root");
-          }, 2000);
         }
       } else {
         setError(json.message || "Simulation failed");
@@ -382,24 +306,14 @@ export default function RfidExitPage() {
     }
   };
 
-  const handleManualSubmit = () => {
-    if (manualInput.trim()) {
-      setManualTagId(manualInput.trim());
-      setManualInput("");
-    }
+  const handleGoHome = () => {
+    router.push("/home", "root");
   };
 
-  const handleReset = () => {
-    stopPolling();
-    resetReader();
-    setTxn(null);
-    setReceipt(null);
-    setQrImageUrl(null);
-    setPaymentId(null);
-    setQrExpiry(0);
-    setError("");
-    setManualInput("");
-  };
+  const liveDuration =
+    txn && txn.status === "Open"
+      ? Math.round((Date.now() - new Date(txn.entryTime).getTime()) / 60000)
+      : null;
 
   return (
     <IonPage>
@@ -410,88 +324,11 @@ export default function RfidExitPage() {
       </IonHeader>
 
       <IonContent className="ion-padding">
-        {/* Scanner Status */}
-        <IonCard
-          style={{
-            border: isReading
-              ? "2px solid var(--ion-color-warning)"
-              : tagId
-              ? "2px solid var(--ion-color-success)"
-              : "2px solid var(--ion-color-medium)",
-            transition: "border-color 0.2s",
-          }}
-        >
-          <IonCardHeader>
-            <IonCardTitle
-              style={{ display: "flex", alignItems: "center", gap: 8 }}
-            >
-              RFID Scanner
-              {isReading ? (
-                <IonBadge color="warning">Reading...</IonBadge>
-              ) : tagId ? (
-                <IonBadge color="success">Tag Scanned</IonBadge>
-              ) : (
-                <IonBadge color="medium">Waiting for Scan</IonBadge>
-              )}
-            </IonCardTitle>
-          </IonCardHeader>
-          <IonCardContent>
-            <div
-              style={{
-                padding: 20,
-                background: "var(--ion-color-light)",
-                borderRadius: 8,
-                textAlign: "center",
-                minHeight: 60,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {tagId ? (
-                <span
-                  style={{
-                    fontSize: "1.5rem",
-                    fontWeight: 700,
-                    fontFamily: "monospace",
-                    letterSpacing: 2,
-                  }}
-                >
-                  {tagId}
-                </span>
-              ) : (
-                <span style={{ color: "var(--ion-color-medium)" }}>
-                  {isReading
-                    ? "Reading tag data..."
-                    : "Tap a card on the reader to begin"}
-                </span>
-              )}
-            </div>
-          {/* Manual input fallback */}
-            {!tagId && (
-              <div style={{ marginTop: 8 }}>
-                <IonItem>
-                  <IonInput
-                    placeholder="Enter tag ID manually"
-                    value={manualInput}
-                    onIonInput={(e) => setManualInput(e.detail.value ?? "")}
-                    onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
-                    clearInput
-                  />
-                  <IonButton slot="end" size="small" onClick={handleManualSubmit} disabled={!manualInput.trim()}>
-                    Set
-                  </IonButton>
-                </IonItem>
-              </div>
-            )}
-          </IonCardContent>
-        </IonCard>
-
         {/* Loading */}
         {loading && (
           <div style={{ textAlign: "center", padding: 20 }}>
             <IonSpinner name="crescent" />
-            <p>Looking up transaction...</p>
+            <p>Loading transaction...</p>
           </div>
         )}
 
@@ -506,7 +343,7 @@ export default function RfidExitPage() {
           </IonCard>
         )}
 
-        {/* Transaction details (before exit) */}
+        {/* Open transaction – process exit */}
         {txn && txn.status === "Open" && !receipt && (
           <IonCard>
             <IonCardHeader>
@@ -516,6 +353,12 @@ export default function RfidExitPage() {
             </IonCardHeader>
             <IonCardContent>
               <IonList lines="none">
+                <IonItem>
+                  <IonLabel>
+                    <p>Tag ID</p>
+                    <h3 style={{ fontFamily: "monospace" }}>{txn.tagId}</h3>
+                  </IonLabel>
+                </IonItem>
                 <IonItem>
                   <IonLabel>
                     <p>Area</p>
@@ -545,17 +388,13 @@ export default function RfidExitPage() {
                 disabled={processing}
                 className="ion-margin-top"
               >
-                {processing ? (
-                  <IonSpinner name="crescent" />
-                ) : (
-                  "Process Exit"
-                )}
+                {processing ? <IonSpinner name="crescent" /> : "Process Exit"}
               </IonButton>
             </IonCardContent>
           </IonCard>
         )}
 
-        {/* Post-exit: awaiting payment */}
+        {/* Awaiting payment */}
         {txn && txn.status === "AwaitingPayment" && !receipt && (
           <IonCard>
             <IonCardHeader>
@@ -565,6 +404,12 @@ export default function RfidExitPage() {
             </IonCardHeader>
             <IonCardContent>
               <IonList lines="none">
+                <IonItem>
+                  <IonLabel>
+                    <p>Tag ID</p>
+                    <h3 style={{ fontFamily: "monospace" }}>{txn.tagId}</h3>
+                  </IonLabel>
+                </IonItem>
                 <IonItem>
                   <IonLabel>
                     <p>Area</p>
@@ -626,11 +471,7 @@ export default function RfidExitPage() {
                     <img
                       src={qrImageUrl}
                       alt="QRIS Payment QR Code"
-                      style={{
-                        width: 220,
-                        height: 220,
-                        objectFit: "contain",
-                      }}
+                      style={{ width: 220, height: 220, objectFit: "contain" }}
                     />
                   ) : (
                     <div
@@ -669,7 +510,6 @@ export default function RfidExitPage() {
                     {String(qrExpiry % 60).padStart(2, "0")}
                   </p>
 
-                  {/* Simulate payment button */}
                   <IonButton
                     expand="block"
                     color="tertiary"
@@ -677,17 +517,10 @@ export default function RfidExitPage() {
                     disabled={processing}
                     style={{ marginTop: 12 }}
                   >
-                    {processing ? (
-                      <IonSpinner name="crescent" />
-                    ) : (
-                      "Simulate Successful Payment"
-                    )}
+                    {processing ? <IonSpinner name="crescent" /> : "Simulate Successful Payment"}
                   </IonButton>
 
-                  <IonSpinner
-                    name="dots"
-                    style={{ marginTop: 8 }}
-                  />
+                  <IonSpinner name="dots" style={{ marginTop: 8 }} />
                   <p
                     style={{
                       fontSize: 12,
@@ -700,9 +533,9 @@ export default function RfidExitPage() {
                 </div>
               )}
 
-              {/* Show payment button only if QR not yet displayed */}
+              {/* Payment buttons */}
               {!qrImageUrl && (!txn.payment || txn.payment.status !== "Completed") && (
-                ((txn?.amountCents ?? 0) > 0) ? (
+                (txn?.amountCents ?? 0) > 0 ? (
                   <IonButton
                     expand="block"
                     color="success"
@@ -710,11 +543,7 @@ export default function RfidExitPage() {
                     disabled={processing}
                     className="ion-margin-top"
                   >
-                    {processing ? (
-                      <IonSpinner name="crescent" />
-                    ) : (
-                      "Generate QRIS Payment"
-                    )}
+                    {processing ? <IonSpinner name="crescent" /> : "Generate QRIS Payment"}
                   </IonButton>
                 ) : (
                   <IonButton
@@ -724,11 +553,7 @@ export default function RfidExitPage() {
                     disabled={processing}
                     className="ion-margin-top"
                   >
-                    {processing ? (
-                      <IonSpinner name="crescent" />
-                    ) : (
-                      "Complete transaction (no payment required)"
-                    )}
+                    {processing ? <IonSpinner name="crescent" /> : "Complete transaction (no payment required)"}
                   </IonButton>
                 )
               )}
@@ -740,18 +565,14 @@ export default function RfidExitPage() {
                   disabled={processing}
                   className="ion-margin-top"
                 >
-                  {processing ? (
-                    <IonSpinner name="crescent" />
-                  ) : (
-                    "Generate Receipt"
-                  )}
+                  {processing ? <IonSpinner name="crescent" /> : "Generate Receipt"}
                 </IonButton>
               )}
             </IonCardContent>
           </IonCard>
         )}
 
-        {/* Payment completed — show receipt option */}
+        {/* Closed & paid – receipt option */}
         {txn && txn.status === "Closed" && txn.payment?.status === "Completed" && !receipt && (
           <IonCard>
             <IonCardHeader>
@@ -761,6 +582,12 @@ export default function RfidExitPage() {
             </IonCardHeader>
             <IonCardContent>
               <IonList lines="none">
+                <IonItem>
+                  <IonLabel>
+                    <p>Tag ID</p>
+                    <h3 style={{ fontFamily: "monospace" }}>{txn.tagId}</h3>
+                  </IonLabel>
+                </IonItem>
                 <IonItem>
                   <IonLabel>
                     <p>Area</p>
@@ -805,11 +632,7 @@ export default function RfidExitPage() {
                 disabled={processing}
                 className="ion-margin-top"
               >
-                {processing ? (
-                  <IonSpinner name="crescent" />
-                ) : (
-                  "Generate Receipt"
-                )}
+                {processing ? <IonSpinner name="crescent" /> : "Generate Receipt"}
               </IonButton>
             </IonCardContent>
           </IonCard>
@@ -828,7 +651,7 @@ export default function RfidExitPage() {
                 <IonItem>
                   <IonLabel>
                     <p>Tag ID</p>
-                    <h3 style={{ fontFamily: "monospace" }}>{tagId}</h3>
+                    <h3 style={{ fontFamily: "monospace" }}>{txn?.tagId}</h3>
                   </IonLabel>
                 </IonItem>
                 <IonItem>
@@ -855,9 +678,7 @@ export default function RfidExitPage() {
                   <IonItem>
                     <IonLabel>
                       <p>Duration</p>
-                      <h3>
-                        {formatDuration(receipt.receiptData.durationMinutes)}
-                      </h3>
+                      <h3>{formatDuration(receipt.receiptData.durationMinutes)}</h3>
                     </IonLabel>
                   </IonItem>
                 )}
@@ -882,13 +703,17 @@ export default function RfidExitPage() {
           </IonCard>
         )}
 
+        {/* Completion screen with explicit button */}
         {completed && (
           <IonCard style={{ textAlign: "center" }}>
             <IonCardContent>
               <IonText color="success">
                 <h2 style={{ margin: 0 }}>✅ Transaction completed!</h2>
-                <p>Redirecting to dashboard...</p>
-                <IonSpinner name="crescent" />
+                <div style={{ marginTop: 16 }}>
+                  <IonButton expand="block" onClick={handleGoHome}>
+                    Go back to home
+                  </IonButton>
+                </div>
               </IonText>
             </IonCardContent>
           </IonCard>

@@ -74,23 +74,4 @@ entryRequests.post(
   }
 );
 
-// POST /entry-requests/:id/reject  (authenticated)
-entryRequests.post(
-  "/:id/reject",
-  requireAuth,
-  requirePermission("transactions.update"),
-  async (c) => {
-    const id = Number(c.req.param("id"));
-    if (isNaN(id)) return c.json({ message: "Invalid ID" }, 400);
-
-    const req = await prisma.entryRequest.findUnique({ where: { id } });
-    if (!req) return c.json({ message: "Entry request not found" }, 404);
-
-    const authUser = c.get("authUser");
-    await prisma.entryRequest.delete({ where: { id } });
-    await logActivity(Number(authUser.userId), "transactions.rfid-entry.reject", `Rejected entry request #${id} (tag: ${req.tagId})`);
-    return c.json({ message: "Entry request rejected" });
-  }
-);
-
 export default entryRequests;

@@ -29,7 +29,6 @@ enum TransactionStatus {
   Open
   AwaitingPayment
   Closed
-  Cancelled
 }
 
 enum PaymentMethod {
