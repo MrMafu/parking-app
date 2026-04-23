@@ -26,7 +26,8 @@ exitRequests.get("/", requireAuth, requirePermission("transactions.view"), async
   return c.json({ message: "Exit requests retrieved", data: rows });
 });
 
-exitRequests.get("/:id", requireAuth, requirePermission("transactions.view"), async (c) => {
+// GET /exit-requests/:id - get single request (used by polling)
+exitRequests.get("/:id", async (c) => {
   const id = Number(c.req.param("id"));
   if (isNaN(id)) return c.json({ message: "Invalid ID" }, 400);
   const req = await prisma.exitRequest.findUnique({ where: { id } });
