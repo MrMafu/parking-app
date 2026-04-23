@@ -121,25 +121,6 @@ export function calculateAmount(
 }
 
 /**
- * Cancel a transaction.
- */
-export async function cancelTransaction(id: number): Promise<TransactionDetail> {
-  const txn = await prisma.transaction.findUnique({
-    where: { id },
-    select: { status: true },
-  });
-  if (!txn) throw new Error("Transaction not found");
-  if (txn.status === "Closed") throw new Error("Cannot cancel a closed transaction");
-  if (txn.status === "Cancelled") throw new Error("Transaction is already cancelled");
-
-  return prisma.transaction.update({
-    where: { id },
-    data: { status: "Cancelled" },
-    select: transactionSelect,
-  });
-}
-
-/**
  * Create a new RFID-based transaction (tag entry).
  * No vehicle registration needed — just tag ID and parking area.
  * Rate is not assigned at entry; it will be assigned at exit when vehicle type is selected.

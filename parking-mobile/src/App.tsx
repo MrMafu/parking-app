@@ -19,8 +19,8 @@ import LoginPage from "./pages/Login";
 import HomePage from "./pages/Home";
 import TransactionsPage from "./pages/Transactions";
 import AccountPage from "./pages/Account";
-import RfidTestPage from "./pages/RfidTest";
-import RfidEntryPage from "./pages/RfidEntry";
+// import RfidTestPage from "./pages/RfidTest";
+// import RfidEntryPage from "./pages/RfidEntry";
 import RfidExitPage from "./pages/RfidExit";
 import { useAuth } from "./context/AuthContext";
 
@@ -80,7 +80,7 @@ function AppRoutes() {
   return (
     <IonRouterOutlet>
       {/* Public RFID pages — no auth required */}
-      <Route exact path="/rfid-test" component={RfidTestPage} />
+      {/* <Route exact path="/rfid-test" component={RfidTestPage} /> */}
       <Route exact path="/rfid-exit" component={RfidExitPage} />
 
       {!user ? (

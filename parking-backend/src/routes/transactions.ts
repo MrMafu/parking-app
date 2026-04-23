@@ -12,7 +12,6 @@ import {
   rfidEntry,
   rfidExit,
   closeTransaction,
-  cancelTransaction,
 } from "../services/transaction-service";
 import { logActivity } from "../lib/activity-log";
 import type { AuthEnv } from "../types/auth";
@@ -123,37 +122,6 @@ transactions.get(
     if (!txn) return c.json({ message: "Transaction not found" }, 404);
 
     return c.json({ message: "Transaction retrieved", data: txn });
-  }
-);
-
-// POST /transactions/:id/cancel
-transactions.post(
-  "/:id/cancel",
-  requireAuth,
-  requirePermission("transactions.update"),
-  async (c) => {
-    const id = Number(c.req.param("id"));
-    if (isNaN(id)) return c.json({ message: "Invalid ID" }, 400);
-
-    try {
-      const authUser = c.get("authUser");
-      const txn = await cancelTransaction(id);
-      await logActivity(
-        Number(authUser.userId),
-        "transactions.cancel",
-        `Cancelled transaction #${id}`
-      );
-      return c.json({ message: "Transaction cancelled", data: txn });
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : "";
-      if (msg.includes("not found")) {
-        return c.json({ message: msg }, 404);
-      }
-      if (msg.includes("Cannot cancel") || msg.includes("already cancelled")) {
-        return c.json({ message: msg }, 400);
-      }
-      throw error;
-    }
   }
 );
 

@@ -157,34 +157,6 @@ export default function HomePage() {
     }
   };
 
-  const rejectExitRequest = async (id: number) => {
-    try {
-      const res = await apiFetch(`/exit-requests/${id}/reject`, { method: "POST" });
-      if (res.ok) {
-        await fetchExitRequests();
-      } else {
-        const json = await res.json();
-        alert(json.message || "Failed to reject exit request");
-      }
-    } catch {
-      alert("Network error");
-    }
-  };
-
-  const rejectRequest = async (id: number) => {
-    try {
-      const res = await apiFetch(`/entry-requests/${id}/reject`, { method: "POST" });
-      if (res.ok) {
-        await fetchEntryRequests();
-      } else {
-        const json = await res.json();
-        alert(json.message || "Failed to reject request");
-      }
-    } catch {
-      alert("Network error");
-    }
-  };
-
   const totalCapacity = areas.reduce((s, a) => s + a.capacity, 0);
   const totalOccupied = areas.reduce((s, a) => s + a.occupied, 0);
   const occupancyPct = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
@@ -285,7 +257,6 @@ export default function HomePage() {
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
                           <IonButton size="small" color="success" onClick={() => approveRequest(r.id)}>Approve</IonButton>
-                          <IonButton size="small" color="danger" onClick={() => rejectRequest(r.id)}>Reject</IonButton>
                         </div>
                       </div>
                     </IonCardContent>
@@ -312,7 +283,6 @@ export default function HomePage() {
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
                           <IonButton size="small" color="success" onClick={() => approveExitRequest(r.id)}>Approve</IonButton>
-                          <IonButton size="small" color="danger" onClick={() => rejectExitRequest(r.id)}>Reject</IonButton>
                         </div>
                       </div>
                     </IonCardContent>

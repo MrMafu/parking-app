@@ -10,6 +10,6 @@ export const rfidExitSchema = z.object({
 });
 
 export const listTransactionsSchema = z.object({
-  status: z.enum(["Open", "AwaitingPayment", "Closed", "Cancelled"]).optional(),
+  status: z.enum(["Open", "AwaitingPayment", "Closed"]).optional(),
   areaId: z.coerce.number().int().positive().optional(),
 });
