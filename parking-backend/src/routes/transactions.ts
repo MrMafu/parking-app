@@ -71,6 +71,25 @@ transactions.post(
 
 // GET /transactions/by-tag/:tagId — find active transaction by RFID tag
 // Must be before /:id to avoid route conflict
+// Public version used by gate UI (no auth required)
+transactions.get(
+  "/public/by-tag/:tagId",
+  async (c) => {
+    const tagId = c.req.param("tagId");
+    const includeClosed = c.req.query("includeClosed") === "true";
+    if (!tagId || tagId.length < 4) {
+      return c.json({ message: "Invalid tag ID" }, 400);
+    }
+
+    const txn = await getTransactionByTagId(tagId, includeClosed);
+    if (!txn) {
+      return c.json({ message: "No active transaction found for this tag" }, 404);
+    }
+
+    return c.json({ message: "Transaction retrieved", data: txn });
+  }
+);
+
 transactions.get(
   "/by-tag/:tagId",
   requireAuth,

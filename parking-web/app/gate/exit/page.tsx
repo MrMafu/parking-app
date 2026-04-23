@@ -75,7 +75,7 @@ export default function GateExitPage() {
             setWaitingForClose(true);
             // Start polling transaction status
             closePollInterval.current = setInterval(async () => {
-              const txnRes = await apiFetch(`/transactions/by-tag/${encodeURIComponent(tagId)}?includeClosed=true`);
+              const txnRes = await apiFetch(`/transactions/public/by-tag/${encodeURIComponent(tagId)}?includeClosed=true`);
               if (txnRes.ok) {
                 const txnJson = await txnRes.json();
                 if (txnJson.data && txnJson.data.status === "Closed") {

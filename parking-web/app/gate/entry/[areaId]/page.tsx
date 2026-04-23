@@ -108,7 +108,7 @@ export default function GateEntryPage() {
             // Request deleted – either approved or rejected
             stopPolling();
             // Check if an open transaction exists for this tag
-            const txnRes = await apiFetch(`/transactions/by-tag/${encodeURIComponent(tagId)}`);
+            const txnRes = await apiFetch(`/transactions/public/by-tag/${encodeURIComponent(tagId)}`);
             if (txnRes.ok) {
               const txnJson = await txnRes.json();
               if (txnJson.data && txnJson.data.status === "Open") {
