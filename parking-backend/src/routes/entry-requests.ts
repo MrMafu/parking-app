@@ -32,8 +32,8 @@ entryRequests.get("/", requireAuth, requirePermission("transactions.view"), asyn
   return c.json({ message: "Entry requests retrieved", data: rows });
 });
 
-// GET /entry-requests/:id  (authenticated) - get single request (optional, used by polling)
-entryRequests.get("/:id", requireAuth, requirePermission("transactions.view"), async (c) => {
+// GET /entry-requests/:id - get single request (used by polling)
+entryRequests.get("/:id", async (c) => {
   const id = Number(c.req.param("id"));
   if (isNaN(id)) return c.json({ message: "Invalid ID" }, 400);
   const req = await prisma.entryRequest.findUnique({ where: { id } });
