@@ -45,7 +45,6 @@ export default function HomePage() {
 
   const [areas, setAreas] = useState<ParkingArea[]>([]);
   const [loading, setLoading] = useState(!isOwner); // only load areas for attendants
-  const [entryRequests, setEntryRequests] = useState<Array<{id:number; tagId:string; areaId:number; createdAt:string}>>([]);
   const [exitRequests, setExitRequests] = useState<Array<{id:number; tagId:string; createdAt:string}>>([]);
   const [awaitingPayments, setAwaitingPayments] = useState<Array<{id:number; tagId:string | null; amountCents:number | null; entryTime:string}>>([]);
   const [awaitingPaymentsLoading, setAwaitingPaymentsLoading] = useState(false);
@@ -71,7 +70,6 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!isOwner) fetchAreas();
-    if (isAttendant) fetchEntryRequests();
     if (isAttendant) fetchExitRequests();
     if (isAttendant) fetchAwaitingPayments();
     if (isAttendant) fetchOccupancySeries();
@@ -92,20 +90,6 @@ export default function HomePage() {
     }
   };
 
-  const fetchEntryRequests = async () => {
-    setRequestsLoading(true);
-    try {
-      const res = await apiFetch("/entry-requests");
-      if (res.ok) {
-        const json = await res.json();
-        setEntryRequests(json.data || []);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setRequestsLoading(false);
-    }
-  };
 
   const fetchExitRequests = async () => {
     setExitRequestsLoading(true);
@@ -119,22 +103,6 @@ export default function HomePage() {
       // ignore
     } finally {
       setExitRequestsLoading(false);
-    }
-  };
-
-  const approveRequest = async (id: number) => {
-    try {
-      const res = await apiFetch(`/entry-requests/${id}/approve`, { method: "POST" });
-      if (res.ok) {
-        // refresh lists
-        await fetchEntryRequests();
-        await fetchAreas();
-      } else {
-        const json = await res.json();
-        alert(json.message || "Failed to approve request");
-      }
-    } catch {
-      alert("Network error");
     }
   };
 
@@ -211,7 +179,6 @@ export default function HomePage() {
             } else {
               await Promise.all([
                 fetchAreas(),
-                fetchEntryRequests(),
                 fetchExitRequests(),
                 fetchAwaitingPayments(),
                 fetchOccupancySeries(),
@@ -239,31 +206,6 @@ export default function HomePage() {
             <ChartCard title="Area Occupancy">
               <OccupancyBarChart data={areas.map(a => ({ areaName: a.name, occupied: a.occupied, capacity: a.capacity }))} />
             </ChartCard>
-            {/* Pending entry requests (attendant) */}
-            <div className="ion-padding-horizontal">
-              <h6 style={{ marginTop: 8 }}>Pending Entry Requests</h6>
-              {requestsLoading ? (
-                <div style={{ padding: 8 }}><IonSpinner name="dots" /></div>
-              ) : entryRequests.length === 0 ? (
-                <div style={{ padding: 8 }}><IonText color="medium">No pending requests</IonText></div>
-              ) : (
-                entryRequests.map((r) => (
-                  <IonCard key={r.id} style={{ marginTop: 8 }}>
-                    <IonCardContent>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontWeight: 700 }}>{r.tagId}</div>
-                          <div style={{ fontSize: 12, color: '#666' }}>Area: {r.areaId} • {new Date(r.createdAt).toLocaleTimeString()}</div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <IonButton size="small" color="success" onClick={() => approveRequest(r.id)}>Approve</IonButton>
-                        </div>
-                      </div>
-                    </IonCardContent>
-                  </IonCard>
-                ))
-              )}
-            </div>
 
             {/* Pending exit requests (attendant) */}
             <div className="ion-padding-horizontal">
